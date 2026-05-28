@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Box, Typography, CircularProgress, Stack, useTheme } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AuthGuard from '@/components/auth/AuthGuard';
 import Navbar from '@/components/Navbar/index';
 import HeroSection from '@/components/home/HeroSection';
 import ProjectList from '@/components/home/ProjectList';
@@ -10,9 +11,12 @@ import CreateProjectDialog from '@/components/home/CreateProjectDialog';
 import MigrationDialog from '@/components/home/MigrationDialog';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
+import { tokenAtom } from '@/lib/auth-context';
 
-export default function Home() {
+function HomeContent() {
   const { t } = useTranslation();
+  const token = useAtomValue(tokenAtom);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,8 +28,9 @@ export default function Home() {
     async function fetchProjects() {
       try {
         setLoading(true);
-        // 获取用户创建的项目详情
-        const response = await fetch(`/api/projects`);
+        const response = await fetch('/api/projects', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
         if (!response.ok) {
           throw new Error(t('projects.fetchFailed'));
@@ -34,7 +39,6 @@ export default function Home() {
         const data = await response.json();
         setProjects(data);
 
-        // 检查是否有未迁移的项目
         await checkUnmigratedProjects();
       } catch (error) {
         console.error(t('projects.fetchError'), String(error));
@@ -44,18 +48,15 @@ export default function Home() {
       }
     }
 
-    // 检查未迁移的项目
     async function checkUnmigratedProjects() {
       try {
-        const response = await fetch('/api/projects/unmigrated');
+        const response = await fetch('/api/projects/unmigrated', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-        if (!response.ok) {
-          console.error('检查未迁移项目失败');
-          return;
-        }
+        if (!response.ok) return;
 
         const { success, data } = await response.json();
-
         if (success && Array.isArray(data) && data.length > 0) {
           setUnmigratedProjects(data);
           setMigrationDialogOpen(true);
@@ -65,8 +66,8 @@ export default function Home() {
       }
     }
 
-    fetchProjects();
-  }, []);
+    if (token) fetchProjects();
+  }, [token]);
 
   const theme = useTheme();
 
@@ -85,69 +86,44 @@ export default function Home() {
           zIndex: 1
         }}
       >
-        {/* <StatsCard projects={projects} /> */}
-
         {loading && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              width: '100%',
-              mt: 6,
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 2
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mt: 6,
+            flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <CircularProgress size={40} thickness={4} />
-            <Typography variant="body2" color="text.secondary">
-              {t('projects.loading')}
-            </Typography>
+            <Typography variant="body2" color="text.secondary">{t('projects.loading')}</Typography>
           </Box>
         )}
 
         {error && !loading && (
-          <Box
-            component={motion.div}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-            sx={{
-              mt: 4,
-              p: 3,
-              bgcolor: 'error.light',
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-            }}
-          >
+          <Box component={motion.div} initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}
+            sx={{ mt: 4, p: 3, bgcolor: 'error.light', borderRadius: 2, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
             <Stack direction="row" spacing={1} alignItems="center">
               <ErrorOutlineIcon color="error" />
-              <Typography color="error.dark">
-                {t('projects.fetchFailed')}: {error}
-              </Typography>
+              <Typography color="error.dark">{t('projects.fetchFailed')}: {error}</Typography>
             </Stack>
           </Box>
         )}
 
         {!loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}>
             <ProjectList projects={projects} onCreateProject={() => setCreateDialogOpen(true)} />
           </motion.div>
         )}
       </Container>
 
       <CreateProjectDialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} />
-
-      {/* 项目迁移对话框 */}
-      <MigrationDialog
-        open={migrationDialogOpen}
-        onClose={() => setMigrationDialogOpen(false)}
-        projectIds={unmigratedProjects}
-      />
+      <MigrationDialog open={migrationDialogOpen} onClose={() => setMigrationDialogOpen(false)}
+        projectIds={unmigratedProjects} />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthGuard>
+      <HomeContent />
+    </AuthGuard>
   );
 }
