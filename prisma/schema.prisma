@@ -87,6 +87,8 @@ model OperationLogs {
   @@index([projectId])
   @@index([action])
   @@index([projectId, createAt])
+  @@index([createAt])
+  @@index([targetId])
 }
 
 model Projects {
