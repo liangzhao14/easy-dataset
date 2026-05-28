@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import { nanoid } from 'nanoid';
 import * as XLSX from 'xlsx';
+import { withAuth } from '@/lib/auth/middleware';
+
+const MAX_EVAL_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_EVAL_ITEMS_PER_IMPORT = 10000;
 
 /**
  * Validate true/false item schema
@@ -231,7 +235,7 @@ function parseJSON(content) {
 /**
  * POST - Import evaluation datasets
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const formData = await request.formData();
@@ -244,6 +248,13 @@ export async function POST(request, { params }) {
 
     if (!file) {
       return NextResponse.json({ code: 400, error: 'Please upload a file' }, { status: 400 });
+    }
+
+    if (file.size && file.size > MAX_EVAL_FILE_SIZE) {
+      return NextResponse.json(
+        { code: 413, error: `文件大小超过限制（${MAX_EVAL_FILE_SIZE / 1024 / 1024} MB）` },
+        { status: 413 }
+      );
     }
 
     if (!questionType) {
@@ -286,6 +297,13 @@ export async function POST(request, { params }) {
 
     if (!Array.isArray(data) || data.length === 0) {
       return NextResponse.json({ code: 400, error: 'File is empty or has an invalid format' }, { status: 400 });
+    }
+
+    if (data.length > MAX_EVAL_ITEMS_PER_IMPORT) {
+      return NextResponse.json(
+        { code: 400, error: `单次导入条数不能超过 ${MAX_EVAL_ITEMS_PER_IMPORT}` },
+        { status: 400 }
+      );
     }
 
     // Validate data
@@ -377,4 +395,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

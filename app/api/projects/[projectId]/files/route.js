@@ -13,6 +13,29 @@ import { getFileMD5 } from '@/lib/util/file';
 import { batchSaveTags } from '@/lib/db/tags';
 import { getProjectChunks, getProjectTocByName } from '@/lib/file/text-splitter';
 import { handleDomainTree } from '@/lib/util/domain-tree';
+import { withAuth } from '@/lib/auth/middleware';
+import { logOperation, updateProjectLastOperator } from '@/lib/audit/logger';
+
+// 服务端上传限制
+const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // 100MB
+const ALLOWED_EXTS = ['.md', '.pdf'];
+
+/**
+ * 文件名安全化：剥离路径分隔符 / 上级目录引用 / 控制字符
+ * 只保留 basename，拒绝危险字符
+ */
+function sanitizeFileName(rawName) {
+  if (typeof rawName !== 'string' || !rawName) return null;
+  // 取 basename，去掉任何路径分量
+  const base = path.basename(rawName.replace(/\\/g, '/'));
+  // 拒绝空、纯点、含控制字符
+  if (!base || base === '.' || base === '..' || /[\x00-\x1f]/.test(base)) return null;
+  // 拒绝绝对路径标识
+  if (base.startsWith('/') || /^[a-zA-Z]:/.test(base)) return null;
+  // 长度限制
+  if (base.length > 255) return null;
+  return base;
+}
 
 // Replace the deprecated config export with the new export syntax
 export const dynamic = 'force-dynamic';
@@ -20,7 +43,7 @@ export const dynamic = 'force-dynamic';
 export const bodyParser = false;
 
 // 获取项目文件列表
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -48,11 +71,12 @@ export async function GET(request, { params }) {
     console.error('Error obtaining file list:', String(error));
     return NextResponse.json({ error: error.message || 'Error obtaining file list' }, { status: 500 });
   }
-}
+});
 
 // 删除文件
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
+    const user = request.user;
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
     const fileId = searchParams.get('fileId');
@@ -148,71 +172,103 @@ export async function DELETE(request, { params }) {
     console.error('Error deleting file:', String(error));
     return NextResponse.json({ error: error.message || 'Error deleting file' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 上传文件
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
+  const user = request.user;
   console.log('File upload request processing, parameters:', params);
   const { projectId } = params;
 
   // 验证项目ID
   if (!projectId) {
-    console.log('The project ID cannot be empty, returning 400 error');
     return NextResponse.json({ error: 'The project ID cannot be empty' }, { status: 400 });
   }
 
-  // 获取项目信息
+  // 获取项目信息（withAuth 已校验权限，这里仅取 project 用于日志/路径）
   const project = await getProject(projectId);
   if (!project) {
-    console.log('The project does not exist, returning 404 error');
     return NextResponse.json({ error: 'The project does not exist' }, { status: 404 });
   }
-  console.log('Project information retrieved successfully:', project.name || project.id);
 
   try {
-    console.log('Try using alternate methods for file upload...');
+    // 1. Content-Length 早期校验（避免读完整 buffer 才发现超大）
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_UPLOAD_SIZE) {
+      return NextResponse.json(
+        { error: `文件大小超过限制（${MAX_UPLOAD_SIZE / 1024 / 1024} MB）` },
+        { status: 413 }
+      );
+    }
 
-    // 检查请求头中是否包含文件名
+    // 2. 文件名提取与安全化
     const encodedFileName = request.headers.get('x-file-name');
-    const fileName = encodedFileName ? decodeURIComponent(encodedFileName) : null;
-    console.log('Get file name from request header:', fileName);
-
-    if (!fileName) {
-      console.log('The request header does not contain a file name');
+    let rawName;
+    try {
+      rawName = encodedFileName ? decodeURIComponent(encodedFileName) : null;
+    } catch (e) {
+      return NextResponse.json({ error: '文件名编码无效' }, { status: 400 });
+    }
+    if (!rawName) {
       return NextResponse.json(
         { error: 'The request header does not contain a file name (x-file-name)' },
         { status: 400 }
       );
     }
 
-    // 检查文件类型
-    if (!fileName.endsWith('.md') && !fileName.endsWith('.pdf')) {
-      return NextResponse.json({ error: 'Only Markdown files are supported' }, { status: 400 });
+    const fileName = sanitizeFileName(rawName);
+    if (!fileName) {
+      return NextResponse.json({ error: '文件名包含非法字符或过长' }, { status: 400 });
     }
 
-    // 直接从请求体中读取二进制数据
-    const fileBuffer = Buffer.from(await request.arrayBuffer());
+    // 3. 扩展名白名单（与提示文案对齐）
+    const ext = path.extname(fileName).toLowerCase();
+    if (!ALLOWED_EXTS.includes(ext)) {
+      return NextResponse.json(
+        { error: `仅支持以下格式：${ALLOWED_EXTS.join(', ')}（前端已将 docx/epub/txt 转换为 md）` },
+        { status: 400 }
+      );
+    }
 
-    // 保存文件
+    // 4. 读取 body 并做最终大小校验（防止 Content-Length 撒谎）
+    const arrayBuffer = await request.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_UPLOAD_SIZE) {
+      return NextResponse.json(
+        { error: `文件大小超过限制（${MAX_UPLOAD_SIZE / 1024 / 1024} MB）` },
+        { status: 413 }
+      );
+    }
+    if (arrayBuffer.byteLength === 0) {
+      return NextResponse.json({ error: '上传内容为空' }, { status: 400 });
+    }
+    const fileBuffer = Buffer.from(arrayBuffer);
+
+    // 5. 解析最终路径，并防御性校验未越过 filesDir
     const projectRoot = await getProjectRoot();
     const projectPath = path.join(projectRoot, projectId);
     const filesDir = path.join(projectPath, 'files');
-
     await ensureDir(filesDir);
 
     const filePath = path.join(filesDir, fileName);
-    await fs.writeFile(filePath, fileBuffer);
-    //获取文件大小
-    const stats = await fs.stat(filePath);
-    //获取文件md5
-    const md5 = await getFileMD5(filePath);
-    //获取文件扩展名
-    const ext = path.extname(filePath);
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(path.resolve(filesDir) + path.sep)) {
+      return NextResponse.json({ error: '文件路径非法' }, { status: 400 });
+    }
 
-    // let res = await checkUploadFileInfoByMD5(projectId, md5);
-    // if (res) {
-    //   return NextResponse.json({ error: `【${fileName}】该文件已在此项目中存在` }, { status: 400 });
-    // }
+    await fs.writeFile(filePath, fileBuffer);
+    const stats = await fs.stat(filePath);
+    const md5 = await getFileMD5(filePath);
+
+    // 6. MD5 去重：同项目内同 hash 文件直接拒绝
+    const existing = await checkUploadFileInfoByMD5(projectId, md5);
+    if (existing) {
+      // 删除刚写入的重复文件
+      await fs.unlink(filePath).catch(() => {});
+      return NextResponse.json(
+        { error: `文件已存在于此项目（同 MD5）：${existing.fileName}` },
+        { status: 409 }
+      );
+    }
 
     let fileInfo = await createUploadFileInfo({
       projectId,
@@ -223,7 +279,18 @@ export async function POST(request, { params }) {
       path: filesDir
     });
 
-    console.log('The file upload process is complete, and a successful response is returned');
+    // 7. 操作日志 + 项目最终操作人
+    await logOperation({
+      operatorId: user.id,
+      operatorName: user.displayName,
+      action: 'upload_file',
+      targetType: 'file',
+      targetId: fileInfo.id,
+      projectId,
+      afterSnapshot: { fileName, size: stats.size }
+    }).catch(e => console.warn('Audit log failed:', String(e)));
+    await updateProjectLastOperator(projectId, user.id, 'upload_file').catch(() => {});
+
     return NextResponse.json({
       message: 'File uploaded successfully',
       fileName,
@@ -240,4 +307,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

@@ -5,9 +5,10 @@ import { db } from '@/lib/db/index';
 import { importImagesFromDirectories } from '@/lib/services/images';
 import fs from 'fs/promises';
 import path from 'path';
+import { withAuth } from '@/lib/auth/middleware';
 
 // 获取图片列表
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -26,13 +27,16 @@ export async function GET(request, { params }) {
     console.error('Failed to get images:', error);
     return NextResponse.json({ error: error.message || 'Failed to get images' }, { status: 500 });
   }
-}
+});
 
 // 导入图片
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { directories } = await request.json();
+    if (!Array.isArray(directories) || directories.length === 0) {
+      return NextResponse.json({ error: 'directories 不能为空' }, { status: 400 });
+    }
 
     // 调用服务层处理图片导入
     const result = await importImagesFromDirectories(projectId, directories);
@@ -42,10 +46,10 @@ export async function POST(request, { params }) {
     console.error('Failed to import images:', error);
     return NextResponse.json({ error: error.message || 'Failed to import images' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 删除图片
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -89,4 +93,4 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete image:', error);
     return NextResponse.json({ error: error.message || 'Failed to delete image' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

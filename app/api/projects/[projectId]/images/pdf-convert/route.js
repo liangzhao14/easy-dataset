@@ -4,9 +4,12 @@ import { importImagesFromDirectories } from '@/lib/services/images';
 import fs from 'fs/promises';
 import path from 'path';
 import { savePdfAsImages } from '@/lib/util/file';
+import { withAuth } from '@/lib/auth/middleware';
+
+const MAX_PDF_SIZE = 100 * 1024 * 1024; // 100MB
 
 // PDF 转图片并导入
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   let tempPdfPath = null;
   let tempImagesDir = null;
 
@@ -19,8 +22,21 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: '请选择 PDF 文件' }, { status: 400 });
     }
 
-    if (!pdfFile.name.toLowerCase().endsWith('.pdf')) {
+    if (!pdfFile.name || !pdfFile.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ error: '只支持 PDF 文件' }, { status: 400 });
+    }
+
+    if (pdfFile.size && pdfFile.size > MAX_PDF_SIZE) {
+      return NextResponse.json(
+        { error: `PDF 文件大小超过限制（${MAX_PDF_SIZE / 1024 / 1024} MB）` },
+        { status: 413 }
+      );
+    }
+
+    // 安全文件名：只取 basename，避免 ../ 注入
+    const safeName = path.basename(pdfFile.name).replace(/[\x00-\x1f/\\]/g, '_');
+    if (!safeName) {
+      return NextResponse.json({ error: '文件名非法' }, { status: 400 });
     }
 
     const projectPath = await getProjectPath(projectId);
@@ -28,7 +44,7 @@ export async function POST(request, { params }) {
     await fs.mkdir(tempDir, { recursive: true });
 
     // 1. 保存 PDF 到临时目录
-    tempPdfPath = path.join(tempDir, `temp_${Date.now()}_${pdfFile.name}`);
+    tempPdfPath = path.join(tempDir, `temp_${Date.now()}_${safeName}`);
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
     await fs.writeFile(tempPdfPath, pdfBuffer);
 
@@ -95,4 +111,4 @@ export async function POST(request, { params }) {
 
     return NextResponse.json({ error: error.message || 'Failed to convert PDF' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

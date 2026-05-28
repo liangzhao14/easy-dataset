@@ -1,14 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createDataset } from '@/lib/db/datasets';
 import { nanoid } from 'nanoid';
+import { withAuth } from '@/lib/auth/middleware';
 
-export async function POST(request, { params }) {
+const MAX_DATASETS_PER_IMPORT = 10000;
+
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { datasets, sourceInfo } = await request.json();
 
     if (!datasets || !Array.isArray(datasets)) {
       return NextResponse.json({ error: 'Invalid datasets data' }, { status: 400 });
+    }
+
+    if (datasets.length > MAX_DATASETS_PER_IMPORT) {
+      return NextResponse.json(
+        { error: `单次导入条数不能超过 ${MAX_DATASETS_PER_IMPORT}` },
+        { status: 400 }
+      );
     }
 
     const results = [];
@@ -106,4 +116,4 @@ export async function POST(request, { params }) {
     console.error('Import datasets error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
