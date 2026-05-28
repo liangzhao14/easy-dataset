@@ -1,244 +1,178 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Box,
-  Container,
-  Stack,
-  Button,
-  FormControl,
-  Select,
-  MenuItem,
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress,
-  useTheme
+  Container, Typography, Grid, Card, CardContent, Box, Paper,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Chip, LinearProgress, ToggleButtonGroup, ToggleButton, CircularProgress
 } from '@mui/material';
 import {
-  Download as DownloadIcon,
-  FilterList as FilterListIcon,
-  CloudQueue as CloudQueueIcon,
-  CheckCircle as CheckCircleIcon
+  FolderOutlined, DescriptionOutlined, QuizOutlined, CheckCircleOutline,
+  DataArray, TrendingUp
 } from '@mui/icons-material';
-import { useTranslation } from 'react-i18next';
+import AuthGuard from '@/components/auth/AuthGuard';
 import Navbar from '@/components/Navbar/index';
-import StatsCards from './components/StatsCards';
-import Charts from './components/Charts';
-import UsageTable from './components/UsageTable';
-import { useMonitoringData } from './hooks/useMonitoringData';
+import { useAtomValue } from 'jotai';
+import { tokenAtom } from '@/lib/auth-context';
 
-export default function MonitoringPage() {
-  const theme = useTheme();
-  const { t } = useTranslation();
-  const [projects, setProjects] = useState([]);
-  const {
-    loading,
-    summaryData,
-    logsData,
-    filters,
-    pagination,
-    searchTerm,
-    handleFilterChange,
-    handlePageChange,
-    handlePageSizeChange,
-    handleSearchChange
-  } = useMonitoringData();
+const STAGE_COLORS = { '未开始': 'default', '文件解析完成': 'info', '问题生成完成': 'warning', '标注中': 'primary', '标注完成': 'success' };
+const STAGE_LABELS = { '未开始': '未开始', '文件解析完成': '文件就绪', '问题生成完成': '问题就绪', '标注中': '标注中', '标注完成': '已完成' };
 
-  // 获取项目列表用于 Navbar
+function MonitoringPage() {
+  const token = useAtomValue(tokenAtom);
+  const [stats, setStats] = useState(null);
+  const [overview, setOverview] = useState([]);
+  const [ranking, setRanking] = useState([]);
+  const [period, setPeriod] = useState('all');
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const response = await fetch('/api/projects');
-        if (response.ok) {
-          const data = await response.json();
-          setProjects(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-      }
-    }
-    fetchProjects();
-  }, []);
+    if (!token) return;
+    setLoading(true);
+    Promise.all([
+      fetch('/api/monitoring?type=stats', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch('/api/monitoring?type=overview', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`/api/monitoring?type=ranking&period=${period}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
+    ]).then(([s, o, r]) => {
+      if (s.stats) setStats(s.stats);
+      if (o.overview) setOverview(o.overview);
+      if (r.ranking) setRanking(r.ranking);
+    }).catch(console.error)
+      .finally(() => setLoading(false));
+  }, [token, period]);
 
-  const handleTimeRangeChange = (event, newRange) => {
-    if (newRange !== null) {
-      handleFilterChange('timeRange', newRange);
-    }
-  };
-
-  const handleExport = () => {
-    // 简单的导出功能实现，将当前 logsData.details 导出为 CSV
-    if (!logsData.details || logsData.details.length === 0) return;
-
-    const headers = [
-      t('monitoring.table.columns.projectName'),
-      t('monitoring.table.columns.provider'),
-      t('monitoring.table.columns.model'),
-      t('monitoring.table.columns.status'),
-      t('monitoring.table.columns.failureReason'),
-      t('monitoring.table.columns.inputTokens'),
-      t('monitoring.table.columns.outputTokens'),
-      t('monitoring.table.columns.totalTokens'),
-      t('monitoring.table.columns.calls'),
-      t('monitoring.table.columns.avgLatency')
-    ];
-    const csvContent = [
-      headers.join(','),
-      ...logsData.details.map(row =>
-        [
-          row.projectName,
-          row.provider,
-          row.model,
-          row.status,
-          (row.failureReason || '').replace(/,/g, ' '),
-          row.inputTokens,
-          row.outputTokens,
-          row.totalTokens,
-          row.calls,
-          row.avgLatency
-        ].join(',')
-      )
-    ].join('\n');
-
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `llm-monitoring-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-  };
+  if (loading) {
+    return <AuthGuard><Navbar /><Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box></AuthGuard>;
+  }
 
   return (
-    <>
-      <Navbar projects={projects} currentProject={null} />
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 8 }}>
-        <Container maxWidth="xl" sx={{ pt: 4 }}>
-          {/* Header Area */}
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            justifyContent="space-between"
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-            spacing={2}
-            mb={4}
-          >
-            {/* Time Range Selector */}
-            <ToggleButtonGroup
-              value={filters.timeRange}
-              exclusive
-              onChange={handleTimeRangeChange}
-              aria-label="time range"
-              size="small"
-              sx={{
-                bgcolor: 'background.paper',
-                '& .MuiToggleButton-root': {
-                  px: 3,
-                  py: 1,
-                  border: `1px solid ${theme.palette.divider}`,
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark'
-                    }
-                  }
-                }
-              }}
-            >
-              <ToggleButton value="24h">{t('monitoring.timeRange.24h')}</ToggleButton>
-              <ToggleButton value="7d">{t('monitoring.timeRange.7d')}</ToggleButton>
-              <ToggleButton value="30d">{t('monitoring.timeRange.30d')}</ToggleButton>
+    <AuthGuard>
+      <Navbar />
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+        <Typography variant="h5" fontWeight={700} gutterBottom>监控看板</Typography>
+
+        {/* Global Stats */}
+        {stats && (
+          <Grid container spacing={2} sx={{ mb: 4 }}>
+            {[
+              { icon: <FolderOutlined />, label: '项目数', value: stats.projects, color: '#6366f1' },
+              { icon: <DescriptionOutlined />, label: '文件数', value: stats.fileCount, color: '#3b82f6' },
+              { icon: <QuizOutlined />, label: '问题数', value: stats.questionCount, color: '#8b5cf6' },
+              { icon: <DataArray />, label: '数据集', value: stats.datasetCount, color: '#f59e0b' },
+              { icon: <CheckCircleOutline />, label: '已标注', value: stats.confirmedCount, color: '#10b981' },
+              { icon: <TrendingUp />, label: '完成率', value: `${stats.avgCompletionRate}%`, color: '#ef4444' }
+            ].map((item, i) => (
+              <Grid item xs={6} sm={4} md={2} key={i}>
+                <Card sx={{ borderRadius: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                  <CardContent sx={{ textAlign: 'center', py: 2.5 }}>
+                    <Box sx={{ color: item.color, mb: 1 }}>{item.icon}</Box>
+                    <Typography variant="h5" fontWeight={700}>{item.value}</Typography>
+                    <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+
+        {/* Project Overview Table */}
+        <Paper sx={{ borderRadius: 3, mb: 4, overflow: 'hidden' }}>
+          <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" fontWeight={600}>项目总览</Typography>
+          </Box>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>项目名</TableCell>
+                  <TableCell>类型</TableCell>
+                  <TableCell>负责人</TableCell>
+                  <TableCell align="right">文件</TableCell>
+                  <TableCell align="right">问题</TableCell>
+                  <TableCell align="right">数据集</TableCell>
+                  <TableCell>阶段</TableCell>
+                  <TableCell align="right">完成率</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {overview.map(p => (
+                  <TableRow key={p.id} hover>
+                    <TableCell><strong>{p.name}</strong></TableCell>
+                    <TableCell>
+                      <Chip label={p.projectType === 'demo' ? '示范' : p.projectType === 'team' ? '团队' : '个人'} size="small"
+                        color={p.projectType === 'demo' ? 'info' : p.projectType === 'team' ? 'secondary' : 'default'} />
+                    </TableCell>
+                    <TableCell>{p.ownerName}</TableCell>
+                    <TableCell align="right">{p.fileCount}</TableCell>
+                    <TableCell align="right">{p.questionCount}</TableCell>
+                    <TableCell align="right">{p.datasetCount}</TableCell>
+                    <TableCell>
+                      <Chip label={STAGE_LABELS[p.stage] || p.stage} size="small"
+                        color={STAGE_COLORS[p.stage] || 'default'} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LinearProgress variant="determinate" value={p.completionRate}
+                          sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: 'action.hover',
+                            '& .MuiLinearProgress-bar': { borderRadius: 3, bgcolor: p.completionRate === 100 ? '#10b981' : '#6366f1' }
+                          }} />
+                        <Typography variant="caption" sx={{ minWidth: 35 }}>{p.completionRate}%</Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {overview.length === 0 && (
+                  <TableRow><TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>暂无项目</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        {/* Annotation Ranking */}
+        <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" fontWeight={600}>标注排行</Typography>
+            <ToggleButtonGroup size="small" value={period} exclusive
+              onChange={(_, v) => v && setPeriod(v)}>
+              <ToggleButton value="today">今日</ToggleButton>
+              <ToggleButton value="week">本周</ToggleButton>
+              <ToggleButton value="month">本月</ToggleButton>
+              <ToggleButton value="all">全部</ToggleButton>
             </ToggleButtonGroup>
-
-            {/* Filters & Actions */}
-            <Stack direction="row" spacing={2} alignItems="center">
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={filters.projectId}
-                  onChange={e => handleFilterChange('projectId', e.target.value)}
-                  displayEmpty
-                  startAdornment={<FilterListIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />}
-                  sx={{ bgcolor: 'background.paper' }}
-                >
-                  <MenuItem value="all">{t('monitoring.filters.allProjects')}</MenuItem>
-                  {summaryData.projects.map(p => (
-                    <MenuItem key={p.id} value={p.id}>
-                      {p.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={filters.provider}
-                  onChange={e => handleFilterChange('provider', e.target.value)}
-                  displayEmpty
-                  startAdornment={<CloudQueueIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />}
-                  sx={{ bgcolor: 'background.paper' }}
-                >
-                  <MenuItem value="all">{t('monitoring.filters.allProviders')}</MenuItem>
-                  {summaryData.providers.map(provider => (
-                    <MenuItem key={provider} value={provider}>
-                      {provider}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <Select
-                  value={filters.status}
-                  onChange={e => handleFilterChange('status', e.target.value)}
-                  displayEmpty
-                  startAdornment={<CheckCircleIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />}
-                  sx={{ bgcolor: 'background.paper' }}
-                >
-                  <MenuItem value="all">{t('monitoring.filters.allStatus')}</MenuItem>
-                  <MenuItem value="SUCCESS">{t('monitoring.status.success')}</MenuItem>
-                  <MenuItem value="FAILED">{t('monitoring.status.failed')}</MenuItem>
-                </Select>
-              </FormControl>
-
-              <Button
-                variant="contained"
-                startIcon={<DownloadIcon />}
-                onClick={handleExport}
-                sx={{ textTransform: 'none', px: 3 }}
-              >
-                {t('monitoring.actions.export')}
-              </Button>
-            </Stack>
-          </Stack>
-
-          {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Stack spacing={3}>
-              {/* 统计卡片 */}
-              <StatsCards data={summaryData.summary} />
-
-              {/* 图表区域 */}
-              <Charts trendData={summaryData.trend} modelDistribution={summaryData.modelDistribution} />
-
-              {/* 详细表格 */}
-              <UsageTable
-                data={logsData.details}
-                total={logsData.total}
-                page={pagination.page}
-                pageSize={pagination.pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-                searchTerm={searchTerm}
-                onSearchChange={handleSearchChange}
-              />
-            </Stack>
-          )}
-        </Container>
-      </Box>
-    </>
+          </Box>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 60 }}>排名</TableCell>
+                  <TableCell>用户</TableCell>
+                  <TableCell align="right">标注数</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {ranking.map((r, i) => (
+                  <TableRow key={r.userId} hover>
+                    <TableCell>
+                      <Chip label={`#${r.rank}`} size="small"
+                        color={i === 0 ? 'warning' : i === 1 ? 'default' : i === 2 ? 'default' : 'default'}
+                        variant={i < 3 ? 'filled' : 'outlined'}
+                        sx={i === 0 ? { bgcolor: '#f59e0b', color: '#fff' } : i === 1 ? { bgcolor: '#94a3b8', color: '#fff' } : i === 2 ? { bgcolor: '#cd853f', color: '#fff' } : {}} />
+                    </TableCell>
+                    <TableCell><strong>{r.displayName}</strong> <Typography variant="caption" color="text.secondary">@{r.username}</Typography></TableCell>
+                    <TableCell align="right"><strong>{r.count}</strong></TableCell>
+                  </TableRow>
+                ))}
+                {ranking.length === 0 && (
+                  <TableRow><TableCell colSpan={3} align="center" sx={{ py: 4, color: 'text.secondary' }}>暂无标注数据</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Container>
+    </AuthGuard>
   );
 }
+
+export default function Page() { return <MonitoringPage />; }
