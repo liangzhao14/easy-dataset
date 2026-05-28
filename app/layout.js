@@ -1,6 +1,7 @@
 import './globals.css';
 import ThemeRegistry from '@/components/ThemeRegistry';
 import I18nProvider from '@/components/I18nProvider';
+import AuthProvider from '@/lib/auth-provider';
 import { Toaster } from 'sonner';
 import { Provider } from 'jotai';
 
@@ -8,7 +9,7 @@ export const metadata = {
   title: 'Easy Dataset',
   description: '一个强大的 LLM 数据集生成工具',
   icons: {
-    icon: '/imgs/logo.ico' // 更新为正确的文件名
+    icon: '/imgs/logo.ico'
   }
 };
 
@@ -19,8 +20,10 @@ export default function RootLayout({ children }) {
         <Provider>
           <ThemeRegistry>
             <I18nProvider>
-              {children}
-              <Toaster richColors position="top-right" duration={1000} />
+              <AuthProvider>
+                {children}
+                <Toaster richColors position="top-right" duration={1000} />
+              </AuthProvider>
             </I18nProvider>
           </ThemeRegistry>
         </Provider>
