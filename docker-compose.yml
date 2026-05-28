@@ -1,10 +1,37 @@
 services:
   easy-dataset:
-    image: ghcr.io/conardli/easy-dataset
+    # 默认从本地源码构建（包含你的多用户协作功能）
+    # 若想直接拉上游镜像，把 build 段注释掉，取消下方 image: ghcr.io/... 注释
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # image: ghcr.io/conardli/easy-dataset   # 上游镜像，不含本仓库的 auth/team/audit/monitoring 改动
+    image: easy-dataset:local
     container_name: easy-dataset
-    ports:
-      - '1717:1717'
-    volumes:
-      - ./local-db:/app/local-db
-      - ./prisma:/app/prisma
     restart: unless-stopped
+    ports:
+      - '${HOST_PORT:-1717}:1717'
+    env_file:
+      - .env
+    environment:
+      # JWT_SECRET 必须在 .env 设置，容器会校验并拒绝默认值
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      NODE_ENV: production
+    volumes:
+      # SQLite + schema 同目录持久化
+      - ./prisma:/app/prisma
+      # 上传文件、分块、项目目录持久化
+      - ./local-db:/app/local-db
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:1717/api/auth/init >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M

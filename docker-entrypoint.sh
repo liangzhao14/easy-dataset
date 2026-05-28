@@ -13,6 +13,18 @@ PRISMA_TEMPLATE_DIR="/app/prisma-template"
 DB_FILE="$PRISMA_DIR/db.sqlite"
 LOCAL_DB_DIR="/app/local-db"
 
+# ===== 1. JWT_SECRET 安全校验（生产必须） =====
+DEFAULT_SECRET="easy-dataset-dev-secret-change-in-production"
+if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "$DEFAULT_SECRET" ]; then
+    echo "${RED}=== ❌ JWT_SECRET 未设置或仍为默认值，拒绝启动 ===${NC}"
+    echo "${YELLOW}请在 .env 或 docker-compose.yml 中设置 JWT_SECRET${NC}"
+    echo "${YELLOW}生成方式：${NC}  openssl rand -hex 32"
+    exit 1
+fi
+if [ "${#JWT_SECRET}" -lt 32 ]; then
+    echo "${YELLOW}⚠️  JWT_SECRET 长度 < 32，建议至少 32 位${NC}"
+fi
+
 echo "${GREEN}=== Easy Dataset Database Initialization ===${NC}"
 
 # Create prisma directory if it doesn't exist
@@ -61,6 +73,16 @@ if [ ! -f "$DB_FILE" ]; then
     fi
 else
     echo "${GREEN}Database file exists: $DB_FILE${NC}"
+    # 已有 DB：执行 db push 以应用 schema 升级（新增字段/索引等）
+    # --skip-generate 跳过 client 生成（构建时已生成）
+    echo "${YELLOW}Applying schema migrations (idempotent)...${NC}"
+    cd /app
+    pnpm prisma db push --skip-generate --accept-data-loss 2>&1 | grep -vE "^(Environment|Datasource|Prisma)" || true
+fi
+
+# ===== 上传/分块目录确保存在 =====
+if [ ! -d "$LOCAL_DB_DIR" ]; then
+    mkdir -p "$LOCAL_DB_DIR"
 fi
 
 echo "${GREEN}=== Database Ready! Starting application... ===${NC}"
