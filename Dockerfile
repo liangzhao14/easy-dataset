@@ -30,6 +30,10 @@ RUN pnpm install
 # 复制源代码
 COPY . .
 
+# 构建期占位 DATABASE_URL（指向临时 SQLite，仅供 prisma db push 通过）
+# 运行时 entrypoint 会用真实路径覆盖（/app/prisma/db.sqlite）
+ENV DATABASE_URL="file:/tmp/build-placeholder.db"
+
 # 根据目标平台设置Prisma二进制目标并构建应用
 RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
         echo "Configuring for ARM64 platform"; \
@@ -39,7 +43,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
         echo "Configuring for AMD64 platform (default)"; \
         sed -i 's/binaryTargets = \[.*\]/binaryTargets = \["linux-musl-openssl-3.0.x"\]/' prisma/schema.prisma; \
         PRISMA_CLI_BINARY_TARGETS="linux-musl-openssl-3.0.x" pnpm build; \
-    fi
+    fi \
+    && rm -f /tmp/build-placeholder.db
 
 # 构建完成后移除开发依赖，只保留生产依赖
 RUN pnpm prune --prod
@@ -57,11 +62,16 @@ RUN apk add --no-cache \
     librsvg \
     pixman
 
-# 复制package.json和.env文件
-COPY package.json .env ./
+# 复制 package.json（不复制 .env：JWT_SECRET 等敏感信息通过运行时 env 注入）
+COPY package.json ./
 
 # 从构建阶段复制精简后的node_modules（只包含生产依赖）
 COPY --from=builder /app/node_modules ./node_modules
+
+# entrypoint 需要 prisma CLI 跑 db push（schema 升级 / 首次建表）
+# devDependency 已被 prune，这里独立安装到全局
+RUN npm install -g prisma@6.6.0 --omit=optional 2>&1 | tail -5 || \
+    npm install -g prisma@6 --omit=optional
 
 # 从构建阶段复制构建产物
 COPY --from=builder /app/.next ./.next

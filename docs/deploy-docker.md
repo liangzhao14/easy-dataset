@@ -21,14 +21,16 @@ git checkout main
 ### 2. 配置环境变量
 
 ```bash
-cp .env.example .env
-# 生成强随机密钥
-echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
-# 编辑其他可选项（端口等）
-vim .env
+# .env.local 是本机的部署 secret（被 .gitignore 忽略），不会进 git
+cp .env.example .env.local
+# 生成强随机密钥并追加
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env.local
+# 可选：编辑其他项（JWT_EXPIRES_IN 等）
+vim .env.local
 ```
 
 > ⚠️ **JWT_SECRET 必须设置**，否则容器启动时会退出。建议至少 32 位随机字符串。
+> 仓库自带的 `.env` 只放 DATABASE_URL 等通用配置，不要往里写密钥。
 
 ### 3. 构建并启动
 

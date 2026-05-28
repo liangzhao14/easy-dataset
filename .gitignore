@@ -7,6 +7,7 @@ ai-local.json
 .DS_Store
 tsconfig.tsbuildinfo
 mock-login-callback.ts
+.env
 .env.local
 /src/test/crawler
 /src/test/mock
@@ -33,3 +34,7 @@ merge-translations.js
 # Playwright MCP / Hermes runtime caches
 .playwright-mcp/
 .hermes/
+# Claude 会话工作目录
+.claude/
+# 数据库 / 上传备份目录
+backups/

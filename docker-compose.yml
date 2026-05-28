@@ -10,13 +10,13 @@ services:
     container_name: easy-dataset
     restart: unless-stopped
     ports:
-      - '${HOST_PORT:-1717}:1717'
+      - '1717:1717'
     env_file:
-      - .env
+      # .env.local 是本机的部署 secret（被 .gitignore 忽略）
+      # 必须包含 JWT_SECRET=<至少 32 位随机字符串>；可选 JWT_EXPIRES_IN
+      # 生成：cp .env.example .env.local 然后 echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env.local
+      - .env.local
     environment:
-      # JWT_SECRET 必须在 .env 设置，容器会校验并拒绝默认值
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       NODE_ENV: production
     volumes:
       # SQLite + schema 同目录持久化
