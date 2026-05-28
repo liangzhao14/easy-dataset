@@ -21,3 +21,15 @@ prisma/local-db/db.sqlite
 .trae
 opencode.json
 merge-translations.js
+
+# Local performance / planning scripts (not part of project source)
+/perf_test.js
+/perf_test_race.js
+/perf_monitoring.js
+/task_plan.md
+/findings.md
+/progress.md
+
+# Playwright MCP / Hermes runtime caches
+.playwright-mcp/
+.hermes/

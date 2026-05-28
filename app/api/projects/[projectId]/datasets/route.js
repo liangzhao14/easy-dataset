@@ -1,193 +1,102 @@
 import { NextResponse } from 'next/server';
-import {
-  deleteDataset,
-  getDatasetsByPagination,
-  getDatasetsIds,
-  getDatasetsById,
-  updateDataset
-} from '@/lib/db/datasets';
-import datasetService from '@/lib/services/datasets';
+import { getDatasetsByPagination, updateDataset, getDatasetsById, getDatasetsCounts, getConfirmationStats } from '@/lib/db/datasets';
+import { withAuth } from '@/lib/auth/middleware';
+import { logOperation, updateProjectLastOperator } from '@/lib/audit/logger';
 
-// 优化思维链函数已移至服务层
-
-/**
- * 生成数据集（为单个问题生成答案）
- */
-export async function POST(request, { params }) {
+// GET: 保持原逻辑，加 auth
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
-    const { questionId, model, language } = await request.json();
-
-    // 使用数据集生成服务
-    const result = await datasetService.generateDatasetForQuestion(projectId, questionId, {
-      model,
-      language
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Failed to generate dataset:', String(error));
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to generate dataset'
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * 获取项目的所有数据集
- */
-export async function GET(request, { params }) {
-  try {
-    const { projectId } = params;
-    const { searchParams } = new URL(request.url);
-    // 验证项目ID
     if (!projectId) {
       return NextResponse.json({ error: '项目ID不能为空' }, { status: 400 });
     }
+    const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;
-    const size = parseInt(searchParams.get('size')) || 10;
-    const input = searchParams.get('input');
-    const field = searchParams.get('field') || 'question';
+    const pageSize = parseInt(searchParams.get('pageSize')) || 10;
     const status = searchParams.get('status');
-    const hasCot = searchParams.get('hasCot');
-    const isDistill = searchParams.get('isDistill');
-    const scoreRange = searchParams.get('scoreRange');
-    const customTag = searchParams.get('customTag');
-    const noteKeyword = searchParams.get('noteKeyword');
-    const chunkName = searchParams.get('chunkName');
+    const input = searchParams.get('input') || '';
+    const field = searchParams.get('field') || 'question';
+    const hasCot = searchParams.get('hasCot') || 'all';
+    const isDistill = searchParams.get('isDistill') || 'all';
+    const scoreRange = searchParams.get('scoreRange') || '';
+    const customTag = searchParams.get('customTag') || '';
+    const noteKeyword = searchParams.get('noteKeyword') || '';
+    const chunkName = searchParams.get('chunkName') || '';
+
     let confirmed = undefined;
     if (status === 'confirmed') confirmed = true;
     if (status === 'unconfirmed') confirmed = false;
 
-    let selectedAll = searchParams.get('selectedAll');
-
-    if (selectedAll) {
-      let data = await getDatasetsIds(
-        projectId,
-        confirmed,
-        input,
-        field,
-        hasCot,
-        isDistill,
-        scoreRange,
-        customTag,
-        noteKeyword,
-        chunkName
-      );
-      return NextResponse.json(data);
-    }
-
-    // 获取数据集
-    const datasets = await getDatasetsByPagination(
-      projectId,
-      page,
-      size,
-      confirmed,
-      input,
-      field, // 传递搜索字段参数
-      hasCot, // 传递思维链筛选参数
-      isDistill, // 传递蒸馏数据集筛选参数
-      scoreRange, // 传递评分范围筛选参数
-      customTag, // 传递自定义标签筛选参数
-      noteKeyword, // 传递备注关键字筛选参数
-      chunkName // 传递文本块名称筛选参数
+    const { data, total, confirmedCount } = await getDatasetsByPagination(
+      projectId, page, pageSize, confirmed, input, field, hasCot, isDistill,
+      scoreRange, customTag, noteKeyword, chunkName
     );
 
-    return NextResponse.json(datasets);
+    const counts = await getDatasetsCounts(projectId);
+    const stats = await getConfirmationStats(projectId);
+
+    return NextResponse.json({ data, total, confirmedCount, ...counts, ...stats });
   } catch (error) {
     console.error('获取数据集失败:', String(error));
-    return NextResponse.json(
-      {
-        error: error.message || '获取数据集失败'
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || '获取数据集失败' }, { status: 500 });
   }
-}
+});
 
-/**
- * 删除数据集
- */
-export async function DELETE(request) {
+// PATCH: 更新数据集（含标注归属）
+export const PATCH = withAuth(async function (request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const datasetId = searchParams.get('id');
-    if (!datasetId) {
-      return NextResponse.json(
-        {
-          error: 'Dataset ID cannot be empty'
-        },
-        { status: 400 }
-      );
-    }
-
-    await deleteDataset(datasetId);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Dataset deleted successfully'
-    });
-  } catch (error) {
-    console.error('Failed to delete dataset:', error);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to delete dataset'
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * 编辑数据集
- */
-export async function PATCH(request) {
-  try {
+    const user = request.user;
     const { searchParams } = new URL(request.url);
     const datasetId = searchParams.get('id');
     const { answer, cot, question, confirmed } = await request.json();
+
     if (!datasetId) {
-      return NextResponse.json(
-        {
-          error: 'Dataset ID cannot be empty'
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Dataset ID cannot be empty' }, { status: 400 });
     }
-    // 获取所有数据集
+
     let dataset = await getDatasetsById(datasetId);
     if (!dataset) {
-      return NextResponse.json(
-        {
-          error: 'Dataset does not exist'
-        },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Dataset does not exist' }, { status: 404 });
     }
-    let data = { id: datasetId };
-    if (confirmed !== undefined) data.confirmed = confirmed;
-    if (answer) data.answer = answer;
-    if (cot) data.cot = cot;
-    if (question) data.question = question;
 
-    // 保存更新后的数据集列表
-    await updateDataset(data);
+    const before = { confirmed: dataset.confirmed, answer: dataset.answer?.substring(0, 100) };
 
-    return NextResponse.json({
-      success: true,
-      message: 'Dataset updated successfully',
-      dataset: dataset
+    let updateData = { id: datasetId };
+    if (confirmed !== undefined) {
+      updateData.confirmed = confirmed;
+      if (confirmed) {
+        updateData.annotatorId = user.id;
+        updateData.annotatedAt = new Date();
+      }
+    }
+    if (answer) updateData.answer = answer;
+    if (cot) updateData.cot = cot;
+    if (question) updateData.question = question;
+
+    // 最后操作人
+    updateData.lastOperatorId = user.id;
+
+    await updateDataset(updateData);
+
+    // 记录操作日志
+    const action = confirmed ? 'confirm_dataset' : confirmed === false ? 'unconfirm_dataset' : 'update_dataset';
+    await logOperation({
+      operatorId: user.id,
+      operatorName: user.displayName,
+      action,
+      targetType: 'dataset',
+      targetId: datasetId,
+      projectId: dataset.projectId,
+      beforeSnapshot: before,
+      afterSnapshot: { confirmed, answer: answer?.substring(0, 100) }
     });
+
+    // 更新项目最终操作人
+    await updateProjectLastOperator(dataset.projectId, user.id, action);
+
+    return NextResponse.json({ success: true, message: 'Dataset updated successfully' });
   } catch (error) {
     console.error('Failed to update dataset:', String(error));
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to update dataset'
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Failed to update dataset' }, { status: 500 });
   }
-}
+});

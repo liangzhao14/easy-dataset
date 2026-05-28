@@ -39,8 +39,10 @@ export default function ProjectList({ projects, onCreateProject }) {
 
     try {
       setLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('easy-dataset-token') : null;
       const response = await fetch(`/api/projects/${projectToDelete.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
       if (!response.ok) {

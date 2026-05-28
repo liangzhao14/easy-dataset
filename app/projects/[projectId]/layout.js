@@ -1,16 +1,19 @@
 'use client';
 
+import AuthGuard from '@/components/auth/AuthGuard';
 import Navbar from '@/components/Navbar/index';
 import { useState, useEffect } from 'react';
 import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { useSetAtom } from 'jotai';
+import { useSetAtom, useAtomValue } from 'jotai';
 import { modelConfigListAtom, selectedModelInfoAtom } from '@/lib/store';
+import { tokenAtom } from '@/lib/auth-context';
 
-export default function ProjectLayout({ children, params }) {
+function ProjectLayoutInner({ children, params }) {
   const router = useRouter();
   const { projectId } = params;
+  const token = useAtomValue(tokenAtom);
   const [projects, setProjects] = useState([]);
   const [currentProject, setCurrentProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,10 +26,12 @@ export default function ProjectLayout({ children, params }) {
     try {
       setLoading(true);
 
+      const headers = { Authorization: `Bearer ${token}` };
+
       const [projectsResponse, projectResponse, modelConfigResponse] = await Promise.all([
-        fetch('/api/projects'),
-        fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/model-config`)
+        fetch('/api/projects', { headers }),
+        fetch(`/api/projects/${projectId}`, { headers }),
+        fetch(`/api/projects/${projectId}/model-config`, { headers })
       ]);
 
       if (!projectsResponse.ok) {
@@ -72,21 +77,12 @@ export default function ProjectLayout({ children, params }) {
       router.push('/');
       return;
     }
-
-    fetchData();
-  }, [projectId, router]);
+    if (token) fetchData();
+  }, [projectId, router, token]);
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh'
-        }}
-      >
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <CircularProgress />
         <Typography sx={{ mt: 2 }}>Loading project data...</Typography>
       </Box>
@@ -95,18 +91,8 @@ export default function ProjectLayout({ children, params }) {
 
   if (error) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh'
-        }}
-      >
-        <Typography color="error">
-          {t('projects.fetchFailed')}: {error}
-        </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <Typography color="error">{t('projects.fetchFailed')}: {error}</Typography>
         <Button variant="contained" onClick={() => router.push('/')} sx={{ mt: 2 }}>
           {t('projects.backToHome')}
         </Button>
@@ -121,5 +107,13 @@ export default function ProjectLayout({ children, params }) {
         {children}
       </Box>
     </>
+  );
+}
+
+export default function ProjectLayout({ children, params }) {
+  return (
+    <AuthGuard>
+      <ProjectLayoutInner children={children} params={params} />
+    </AuthGuard>
   );
 }

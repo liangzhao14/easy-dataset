@@ -4,19 +4,23 @@ import { useState, useEffect } from 'react';
 import { Container, Typography, Box, Tabs, Tab, Paper, Alert, CircularProgress } from '@mui/material';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
+import { tokenAtom, currentUserAtom } from '@/lib/auth-context';
 
 // 导入设置组件
 import BasicSettings from '@/components/settings/BasicSettings';
 import ModelSettings from '@/components/settings/ModelSettings';
 import TaskSettings from '@/components/settings/TaskSettings';
 import PromptSettings from './components/PromptSettings';
+import MemberManager from '@/components/project/MemberManager';
 
 // 定义 TAB 枚举
 const TABS = {
   BASIC: 'basic',
   MODEL: 'model',
   TASK: 'task',
-  PROMPTS: 'prompts'
+  PROMPTS: 'prompts',
+  MEMBERS: 'members'
 };
 
 export default function SettingsPage({ params }) {
@@ -24,12 +28,14 @@ export default function SettingsPage({ params }) {
   const { projectId } = params;
   const searchParams = useSearchParams();
   const router = useRouter();
+  const token = useAtomValue(tokenAtom);
+  const currentUser = useAtomValue(currentUserAtom);
   const [activeTab, setActiveTab] = useState(TABS.BASIC);
   const [projectExists, setProjectExists] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [project, setProject] = useState(null);
 
-  // 从 URL hash 中获取当前 tab
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && Object.values(TABS).includes(tab)) {
@@ -37,12 +43,13 @@ export default function SettingsPage({ params }) {
     }
   }, [searchParams]);
 
-  // 检查项目是否存在
   useEffect(() => {
     async function checkProject() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/projects/${projectId}`);
+        const response = await fetch(`/api/projects/${projectId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -51,6 +58,8 @@ export default function SettingsPage({ params }) {
             throw new Error(t('projects.fetchFailed'));
           }
         } else {
+          const data = await response.json();
+          setProject(data);
           setProjectExists(true);
         }
       } catch (error) {
@@ -61,15 +70,15 @@ export default function SettingsPage({ params }) {
       }
     }
 
-    checkProject();
-  }, [projectId, t]);
+    if (token) checkProject();
+  }, [projectId, token]);
 
-  // 处理 tab 切换
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-    // 更新 URL hash
     router.push(`/projects/${projectId}/settings?tab=${newValue}`);
   };
+
+  const isOwner = project?.ownerId === currentUser?.id || currentUser?.role === 'admin';
 
   if (loading) {
     return (
@@ -98,28 +107,21 @@ export default function SettingsPage({ params }) {
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Paper sx={{ mb: 4 }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          textColor="primary"
-          indicatorColor="primary"
-          aria-label={t('settings.tabsAriaLabel')}
-        >
+        <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth"
+          textColor="primary" indicatorColor="primary">
           <Tab value={TABS.BASIC} label={t('settings.basicInfo')} />
           <Tab value={TABS.MODEL} label={t('settings.modelConfig')} />
           <Tab value={TABS.TASK} label={t('settings.taskConfig')} />
           <Tab value={TABS.PROMPTS} label={t('settings.promptConfig')} />
+          <Tab value={TABS.MEMBERS} label="成员管理" />
         </Tabs>
       </Paper>
 
       {activeTab === TABS.BASIC && <BasicSettings projectId={projectId} />}
-
       {activeTab === TABS.MODEL && <ModelSettings projectId={projectId} />}
-
       {activeTab === TABS.TASK && <TaskSettings projectId={projectId} />}
-
       {activeTab === TABS.PROMPTS && <PromptSettings projectId={projectId} />}
+      {activeTab === TABS.MEMBERS && <MemberManager projectId={projectId} isOwner={isOwner} />}
     </Container>
   );
 }

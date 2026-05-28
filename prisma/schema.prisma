@@ -8,6 +8,89 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Users {
+  id           String    @id @default(nanoid())
+  username     String    @unique
+  displayName  String
+  passwordHash String
+  role         String    @default("user")
+  status       Int       @default(1)
+  lastLoginAt  DateTime?
+  createAt     DateTime  @default(now())
+  updateAt     DateTime  @updatedAt
+
+  ownedProjects     Projects[]         @relation("ProjectOwner")
+  lastOpProjects    Projects[]         @relation("ProjectLastOperator")
+  teamMemberships   TeamMembers[]
+  projectMemberships ProjectMembers[]
+  operationLogs     OperationLogs[]
+  annotatedDatasets Datasets[]         @relation("DatasetAnnotator")
+  lastOpDatasets    Datasets[]         @relation("DatasetLastOperator")
+}
+
+model Teams {
+  id          String   @id @default(nanoid())
+  name        String   @unique
+  description String   @default("")
+  createAt    DateTime @default(now())
+  updateAt    DateTime @updatedAt
+
+  members  TeamMembers[]
+  projects Projects[]   @relation("TeamProjects")
+}
+
+model TeamMembers {
+  id       String   @id @default(nanoid())
+  team     Teams    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   String
+  user     Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  role     String   @default("member")
+  createAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  @@unique([teamId, userId])
+  @@index([userId])
+}
+
+model ProjectMembers {
+  id        String   @id @default(nanoid())
+  project   Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      String   @default("editor")
+  createAt  DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model OperationLogs {
+  id             String   @id @default(nanoid())
+  operator       Users    @relation(fields: [operatorId], references: [id])
+  operatorId     String
+  operatorName   String
+  action         String
+  targetType     String
+  targetId       String?
+  projectId      String?
+  teamId         String?
+  beforeSnapshot String?
+  afterSnapshot  String?
+  ip             String?
+  userAgent      String?
+  createAt       DateTime @default(now())
+
+  @@index([operatorId])
+  @@index([projectId])
+  @@index([action])
+  @@index([projectId, createAt])
+  @@index([createAt])
+  @@index([targetId])
+}
+
 model Projects {
   id                   String                 @id @default(nanoid(12))
   name                 String
@@ -22,6 +105,21 @@ model Projects {
   test                 String                 @default("")
   createAt             DateTime               @default(now())
   updateAt             DateTime               @updatedAt
+
+  // 多用户协作字段
+  owner            Users?              @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId          String?
+  team             Teams?              @relation("TeamProjects", fields: [teamId], references: [id])
+  teamId           String?
+  projectType      String              @default("personal")  // "personal" | "team" | "demo"
+  visibility       String              @default("private")   // "private" | "team" | "public"
+
+  // 最终操作人追踪
+  lastOperator     Users?              @relation("ProjectLastOperator", fields: [lastOperatorId], references: [id])
+  lastOperatorId   String?
+  lastOperatedAt   DateTime?
+  lastOperationType String?
+
   Questions            Questions[]
   Datasets             Datasets[]
   DatasetConversations DatasetConversations[]
@@ -36,6 +134,7 @@ model Projects {
   ImageDatasets        ImageDatasets[]
   QuestionTemplates    QuestionTemplates[]
   EvalDatasets         EvalDatasets[]
+  Members              ProjectMembers[]
 }
 
 model UploadFiles {
@@ -127,6 +226,15 @@ model Datasets {
   other         String   @default("") // 存储其他字段的JSON字符串
   createAt      DateTime @default(now())
   updateAt      DateTime @updatedAt
+
+  // 标注归属
+  annotator     Users?   @relation("DatasetAnnotator", fields: [annotatorId], references: [id])
+  annotatorId   String?
+  annotatedAt   DateTime?
+
+  // 最后操作人
+  lastOperator  Users?   @relation("DatasetLastOperator", fields: [lastOperatorId], references: [id])
+  lastOperatorId String?
 
   @@index([projectId])
   @@index([projectId, confirmed, createAt, id], name: "idx_export_confirmed")
