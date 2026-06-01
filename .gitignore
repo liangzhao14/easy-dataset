@@ -38,3 +38,7 @@ merge-translations.js
 .claude/
 # 数据库 / 上传备份目录
 backups/
+# Docker 部署打包产物（GB 级，勿提交）
+deploy-bundle/
+deploy-bundle.tgz
+*.tar
