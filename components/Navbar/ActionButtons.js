@@ -15,6 +15,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import GroupsIcon from '@mui/icons-material/Groups';
 import HistoryIcon from '@mui/icons-material/History';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LanguageSwitcher from '../LanguageSwitcher';
 import UpdateChecker from '../UpdateChecker';
 import TaskIcon from '../TaskIcon';
@@ -110,13 +111,31 @@ export default function ActionButtons({
         <UpdateChecker />
       </Box>
 
-      {/* Logout - always visible */}
+      {/* 当前登录用户 + Logout - always visible */}
       {currentUser && (
-        <Tooltip title="退出登录">
-          <IconButton onClick={handleLogout} size="medium" sx={ab}>
-            <LogoutIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <>
+          <Tooltip title={`账号：${currentUser.username}　角色：${currentUser.role === 'admin' ? '管理员' : '普通用户'}`}>
+            <Box
+              sx={{
+                ...ab,
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1.5,
+                fontSize: '0.85rem',
+                cursor: 'default'
+              }}
+            >
+              <AccountCircleIcon fontSize="small" />
+              {currentUser.displayName}
+            </Box>
+          </Tooltip>
+          <Tooltip title="退出登录">
+            <IconButton onClick={handleLogout} size="medium" sx={ab}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </>
       )}
     </Box>
   );
