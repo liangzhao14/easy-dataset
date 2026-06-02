@@ -104,7 +104,8 @@ export default function EditableField({
   onOptimize,
   tokenCount,
   optimizing = false,
-  dataset
+  dataset,
+  canEdit = true
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -215,7 +216,7 @@ export default function EditableField({
         )}
         {!editing && (
           <>
-            <IconButton size="small" onClick={onEdit} disabled={optimizing}>
+            <IconButton size="small" onClick={onEdit} disabled={optimizing || !canEdit}>
               <EditIcon fontSize="small" />
             </IconButton>
             {onOptimize && !custom && (

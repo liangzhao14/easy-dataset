@@ -10,6 +10,9 @@ import OptimizeDialog from '@/components/datasets/OptimizeDialog';
 import DatasetRatingSection from '@/components/datasets/DatasetRatingSection';
 import useDatasetDetails from '@/app/projects/[projectId]/datasets/[datasetId]/useDatasetDetails';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
+import { projectRoleAtom } from '@/lib/store';
+import { canWrite, canAnnotate } from '@/lib/permissions';
 
 /**
  * 数据集详情页面
@@ -18,6 +21,9 @@ export default function DatasetDetailsPage({ params }) {
   const { projectId, datasetId } = params;
 
   const { t } = useTranslation();
+  const projectRole = useAtomValue(projectRoleAtom);
+  const writable = canWrite(projectRole);
+  const annotatable = canAnnotate(projectRole);
   // 使用自定义Hook管理状态和逻辑
   const {
     currentDataset,
@@ -95,6 +101,8 @@ export default function DatasetDetailsPage({ params }) {
         onConfirm={handleConfirm}
         onUnconfirm={handleUnconfirm}
         onDelete={handleDelete}
+        canAnnotate={annotatable}
+        canWrite={writable}
       />
 
       {/* 主要布局：左右分栏 */}
@@ -107,6 +115,7 @@ export default function DatasetDetailsPage({ params }) {
               value={questionValue}
               editing={editingQuestion}
               onEdit={() => setEditingQuestion(true)}
+              canEdit={writable}
               onChange={e => setQuestionValue(e.target.value)}
               onSave={() => handleSave('question', questionValue)}
               dataset={currentDataset}
@@ -121,6 +130,7 @@ export default function DatasetDetailsPage({ params }) {
               value={answerValue}
               editing={editingAnswer}
               onEdit={() => setEditingAnswer(true)}
+              canEdit={writable}
               onChange={e => setAnswerValue(e.target.value)}
               onSave={() => handleSave('answer', answerValue)}
               onCancel={() => {
@@ -138,6 +148,7 @@ export default function DatasetDetailsPage({ params }) {
               value={cotValue}
               editing={editingCot}
               onEdit={() => setEditingCot(true)}
+              canEdit={writable}
               onChange={e => setCotValue(e.target.value)}
               onSave={() => handleSave('cot', cotValue)}
               dataset={currentDataset}

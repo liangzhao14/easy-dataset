@@ -23,7 +23,9 @@ export default function DatasetHeader({
   onNavigate,
   onConfirm,
   onUnconfirm,
-  onDelete
+  onDelete,
+  canAnnotate = true,
+  canWrite = true
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -74,7 +76,7 @@ export default function DatasetHeader({
             <Button
               variant="outlined"
               color="warning"
-              disabled={unconfirming}
+              disabled={unconfirming || !canAnnotate}
               onClick={onUnconfirm}
               startIcon={unconfirming ? <CircularProgress size={16} /> : <UndoIcon />}
               sx={{ mr: 1 }}
@@ -82,12 +84,12 @@ export default function DatasetHeader({
               {unconfirming ? t('datasets.unconfirming') : t('datasets.unconfirm')}
             </Button>
           ) : (
-            <Button variant="contained" color="primary" disabled={confirming} onClick={onConfirm} sx={{ mr: 1 }}>
+            <Button variant="contained" color="primary" disabled={confirming || !canAnnotate} onClick={onConfirm} sx={{ mr: 1 }}>
               {confirming ? <CircularProgress size={24} /> : t('datasets.confirmSave')}
             </Button>
           )}
 
-          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={onDelete}>
+          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={onDelete} disabled={!canWrite}>
             {t('common.delete')}
           </Button>
         </Box>

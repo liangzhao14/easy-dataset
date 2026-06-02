@@ -30,7 +30,8 @@ import ChunkList from '@/components/text-split/ChunkList';
 import DomainAnalysis from '@/components/text-split/DomainAnalysis';
 import useTaskSettings from '@/hooks/useTaskSettings';
 import { useAtomValue } from 'jotai/index';
-import { selectedModelInfoAtom } from '@/lib/store';
+import { selectedModelInfoAtom, projectRoleAtom } from '@/lib/store';
+import { canWrite } from '@/lib/permissions';
 import useChunks from './useChunks';
 import useQuestionGeneration from './useQuestionGeneration';
 import useDataCleaning from './useDataCleaning';
@@ -52,6 +53,7 @@ export default function TextSplitPage({ params }) {
   const [questionFilter, setQuestionFilter] = useState('all'); // 'all', 'generated', 'ungenerated'
   const [selectedViosnModel, setSelectedViosnModel] = useState('');
   const selectedModelInfo = useAtomValue(selectedModelInfoAtom);
+  const writable = canWrite(useAtomValue(projectRoleAtom));
   const { taskFileProcessing, task } = useFileProcessingStatus();
   const [currentPage, setCurrentPage] = useState(1);
   const [uploadedFiles, setUploadedFiles] = useState({ data: [], total: 0 });
@@ -254,6 +256,7 @@ export default function TextSplitPage({ params }) {
         sx={{ position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)', zIndex: 1, display: 'flex' }}
       >
         <IconButton
+          disabled={!writable}
           onClick={() => setUploaderExpanded(!uploaderExpanded)}
           sx={{
             bgcolor: 'background.paper',
@@ -279,7 +282,7 @@ export default function TextSplitPage({ params }) {
         )}
       </Box>
 
-      <Collapse in={uploaderExpanded}>
+      <Collapse in={uploaderExpanded && writable}>
         <FileUploader
           projectId={projectId}
           onUploadSuccess={handleUploadSuccess}
