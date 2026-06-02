@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Container, Typography, Grid, Card, CardContent, Box, Paper,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Chip, LinearProgress, ToggleButtonGroup, ToggleButton, CircularProgress
+  Chip, LinearProgress, ToggleButtonGroup, ToggleButton, CircularProgress, TextField
 } from '@mui/material';
 import {
   FolderOutlined, DescriptionOutlined, QuizOutlined, CheckCircleOutline,
@@ -30,6 +30,8 @@ function MonitoringPage() {
   const [ranking, setRanking] = useState([]);
   const [trend, setTrend] = useState([]);
   const [period, setPeriod] = useState('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +40,12 @@ function MonitoringPage() {
     Promise.all([
       fetch('/api/monitoring?type=stats', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch('/api/monitoring?type=overview', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`/api/monitoring?type=ranking&period=${period}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(
+        period === 'custom'
+          ? `/api/monitoring?type=ranking${customStart ? `&start=${customStart}` : ''}${customEnd ? `&end=${customEnd}` : ''}`
+          : `/api/monitoring?type=ranking&period=${period}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      ).then(r => r.json()),
       fetch('/api/monitoring?type=annotation-trend', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
     ]).then(([s, o, r, tr]) => {
       if (s.stats) setStats(s.stats);
@@ -47,7 +54,7 @@ function MonitoringPage() {
       if (tr.trend) setTrend(tr.trend);
     }).catch(console.error)
       .finally(() => setLoading(false));
-  }, [token, period]);
+  }, [token, period, customStart, customEnd]);
 
   if (loading) {
     return <AuthGuard><Navbar /><Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box></AuthGuard>;
@@ -176,15 +183,34 @@ function MonitoringPage() {
 
         {/* Annotation Ranking */}
         <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
-          <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="h6" fontWeight={600}>标注排行</Typography>
-            <ToggleButtonGroup size="small" value={period} exclusive
-              onChange={(_, v) => v && setPeriod(v)}>
-              <ToggleButton value="today">今日</ToggleButton>
-              <ToggleButton value="week">本周</ToggleButton>
-              <ToggleButton value="month">本月</ToggleButton>
-              <ToggleButton value="all">全部</ToggleButton>
-            </ToggleButtonGroup>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <ToggleButtonGroup size="small" value={period} exclusive
+                onChange={(_, v) => v && setPeriod(v)}>
+                <ToggleButton value="today">今日</ToggleButton>
+                <ToggleButton value="yesterday">昨天</ToggleButton>
+                <ToggleButton value="week">本周</ToggleButton>
+                <ToggleButton value="month">本月</ToggleButton>
+                <ToggleButton value="all">全部</ToggleButton>
+                <ToggleButton value="custom">自定义</ToggleButton>
+              </ToggleButtonGroup>
+              {period === 'custom' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <TextField
+                    type="date" size="small" label="开始" InputLabelProps={{ shrink: true }}
+                    value={customStart} onChange={e => setCustomStart(e.target.value)}
+                    inputProps={{ max: customEnd || undefined }}
+                  />
+                  <Typography variant="body2" color="text.secondary">~</Typography>
+                  <TextField
+                    type="date" size="small" label="结束" InputLabelProps={{ shrink: true }}
+                    value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+                    inputProps={{ min: customStart || undefined }}
+                  />
+                </Box>
+              )}
+            </Box>
           </Box>
           <TableContainer>
             <Table size="small">

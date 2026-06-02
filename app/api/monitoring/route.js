@@ -95,11 +95,23 @@ export const GET = withAuth(async function (request) {
     if (type === 'ranking') {
       // 用户标注排行
       const period = searchParams.get('period') || 'all';
+      const startParam = searchParams.get('start');
+      const endParam = searchParams.get('end');
       let dateFilter = {};
       const now = new Date();
-      if (period === 'today') {
+      if (startParam || endParam) {
+        // 自定义日期区间（优先于 period）；单日 = start===end
+        const range = {};
+        if (startParam) range.gte = new Date(`${startParam}T00:00:00`);
+        if (endParam) range.lte = new Date(`${endParam}T23:59:59.999`);
+        dateFilter.annotatedAt = range;
+      } else if (period === 'today') {
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         dateFilter.annotatedAt = { gte: start };
+      } else if (period === 'yesterday') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        dateFilter.annotatedAt = { gte: start, lt: end };
       } else if (period === 'week') {
         const start = new Date(now);
         start.setDate(now.getDate() - now.getDay());
