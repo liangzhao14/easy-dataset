@@ -51,6 +51,13 @@ export const PATCH = withAuth(async function (request) {
     const datasetId = searchParams.get('id');
     const { answer, cot, question, confirmed } = await request.json();
 
+    // 标注员（annotator）仅可确认/打分/打标签，不可编辑内容；编辑 answer/cot/question 需 editor+
+    const isContentEdit = answer !== undefined || cot !== undefined || question !== undefined;
+    const roleLevels = { admin: 5, owner: 4, editor: 3, annotator: 2, viewer: 1 };
+    if (isContentEdit && (roleLevels[request.projectRole] || 0) < roleLevels.editor) {
+      return NextResponse.json({ error: '标注员只能确认/打分，不能编辑内容' }, { status: 403 });
+    }
+
     if (!datasetId) {
       return NextResponse.json({ error: 'Dataset ID cannot be empty' }, { status: 400 });
     }
@@ -100,7 +107,7 @@ export const PATCH = withAuth(async function (request) {
     console.error('Failed to update dataset:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to update dataset' }, { status: 500 });
   }
-});
+}, { minProjectRole: 'annotator' });
 
 // POST: 为单个问题同步生成数据集（问题列表「生成数据集」、自动蒸馏均调用此接口）
 export const POST = withAuth(

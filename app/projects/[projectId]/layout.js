@@ -7,7 +7,7 @@ import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useSetAtom, useAtomValue } from 'jotai';
-import { modelConfigListAtom, selectedModelInfoAtom } from '@/lib/store';
+import { modelConfigListAtom, selectedModelInfoAtom, projectRoleAtom } from '@/lib/store';
 import { tokenAtom } from '@/lib/auth-context';
 
 function ProjectLayoutInner({ children, params }) {
@@ -21,6 +21,7 @@ function ProjectLayoutInner({ children, params }) {
   const [t] = useTranslation();
   const setModelConfigList = useSetAtom(modelConfigListAtom);
   const setSelectedModelInfo = useSetAtom(selectedModelInfoAtom);
+  const setProjectRole = useSetAtom(projectRoleAtom);
 
   const fetchData = async () => {
     try {
@@ -49,6 +50,7 @@ function ProjectLayoutInner({ children, params }) {
       }
       const projectData = await projectResponse.json();
       setCurrentProject(projectData);
+      setProjectRole(projectData.myRole || null);
 
       if (modelConfigResponse.ok) {
         const modelConfigData = await modelConfigResponse.json();

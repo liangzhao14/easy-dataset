@@ -10,7 +10,7 @@ export const GET = withAuth(async function (request, { params }) {
     if (!project) {
       return Response.json({ error: '项目不存在' }, { status: 404 });
     }
-    return Response.json({ ...project, taskConfig });
+    return Response.json({ ...project, taskConfig, myRole: request.projectRole });
   } catch (error) {
     console.error('获取项目详情出错:', String(error));
     return Response.json({ error: String(error) }, { status: 500 });

@@ -20,6 +20,9 @@ import { processInParallel } from '@/lib/util/async';
 import axios from 'axios';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'sonner';
+import { useAtomValue } from 'jotai';
+import { projectRoleAtom } from '@/lib/store';
+import { canWrite } from '@/lib/permissions';
 
 // 主页面组件
 export default function DatasetsPage({ params }) {
@@ -40,6 +43,7 @@ export default function DatasetsPage({ params }) {
   const [availableTags, setAvailableTags] = useState([]);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const { t } = useTranslation();
+  const writable = canWrite(useAtomValue(projectRoleAtom));
 
   // 使用 useDatasetFilters Hook 管理筛选条件
   const {
@@ -518,6 +522,7 @@ export default function DatasetsPage({ params }) {
             startIcon={<DeleteIcon />}
             sx={{ borderRadius: 2 }}
             onClick={handleBatchDeleteDataset}
+            disabled={!writable}
           >
             {t('datasets.batchDelete')}
           </Button>
