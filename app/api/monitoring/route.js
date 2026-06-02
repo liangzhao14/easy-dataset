@@ -175,6 +175,7 @@ function computeStage(project, totalDatasets, confirmedCount) {
   if (project._count.UploadFiles === 0 && totalDatasets === 0) return '未开始';
   if (totalDatasets > 0 && confirmedCount === totalDatasets) return '标注完成';
   if (totalDatasets > 0 && confirmedCount > 0) return '标注中';
+  if (totalDatasets > 0) return '数据集就绪';
   if (project._count.Questions > 0) return '问题生成完成';
   if (project._count.UploadFiles > 0) return '文件解析完成';
   return '未开始';
