@@ -67,6 +67,31 @@ export const GET = withAuth(async function (request) {
       return Response.json({ overview });
     }
 
+    if (type === 'annotation-trend') {
+      // 最近 30 天每日标注数（用于折线图），尊重项目权限过滤
+      const projIds = (await db.projects.findMany({ where: projectFilter, select: { id: true } })).map(p => p.id);
+      const rows = await db.datasets.findMany({
+        where: {
+          projectId: { in: projIds },
+          confirmed: true,
+          annotatedAt: { gte: new Date(Date.now() - 29 * 86400000) }
+        },
+        select: { annotatedAt: true }
+      });
+      const map = new Map();
+      for (const r of rows) {
+        if (!r.annotatedAt) continue;
+        const d = r.annotatedAt.toISOString().slice(0, 10);
+        map.set(d, (map.get(d) || 0) + 1);
+      }
+      const trend = [];
+      for (let i = 29; i >= 0; i--) {
+        const dt = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+        trend.push({ date: dt.slice(5), count: map.get(dt) || 0 });
+      }
+      return Response.json({ trend });
+    }
+
     if (type === 'ranking') {
       // 用户标注排行
       const period = searchParams.get('period') || 'all';

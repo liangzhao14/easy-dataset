@@ -14,15 +14,21 @@ import AuthGuard from '@/components/auth/AuthGuard';
 import Navbar from '@/components/Navbar/index';
 import { useAtomValue } from 'jotai';
 import { tokenAtom } from '@/lib/auth-context';
+import {
+  LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
+  Tooltip as RTooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 const STAGE_COLORS = { '未开始': 'default', '文件解析完成': 'info', '问题生成完成': 'warning', '标注中': 'primary', '标注完成': 'success' };
-const STAGE_LABELS = { '未开始': '未开始', '文件解析完成': '文件就绪', '问题生成完成': '问题就绪', '标注中': '标注中', '标注完成': '已完成' };
+const STAGE_LABELS = { '未开始': '未开始', '文件解析完成': '文件就绪', '问题生成完成': '问题就绪', '数据集就绪': '数据集就绪', '标注中': '标注中', '标注完成': '已完成' };
+const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6', '#ec4899', '#14b8a6'];
 
 function MonitoringPage() {
   const token = useAtomValue(tokenAtom);
   const [stats, setStats] = useState(null);
   const [overview, setOverview] = useState([]);
   const [ranking, setRanking] = useState([]);
+  const [trend, setTrend] = useState([]);
   const [period, setPeriod] = useState('all');
   const [loading, setLoading] = useState(true);
 
@@ -32,11 +38,13 @@ function MonitoringPage() {
     Promise.all([
       fetch('/api/monitoring?type=stats', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch('/api/monitoring?type=overview', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`/api/monitoring?type=ranking&period=${period}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
-    ]).then(([s, o, r]) => {
+      fetch(`/api/monitoring?type=ranking&period=${period}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch('/api/monitoring?type=annotation-trend', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
+    ]).then(([s, o, r, tr]) => {
       if (s.stats) setStats(s.stats);
       if (o.overview) setOverview(o.overview);
       if (r.ranking) setRanking(r.ranking);
+      if (tr.trend) setTrend(tr.trend);
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, [token, period]);
@@ -128,6 +136,43 @@ function MonitoringPage() {
             </Table>
           </TableContainer>
         </Paper>
+
+        {/* 标注统计图表（折线趋势 + 人员占比） */}
+        <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
+          <Paper sx={{ borderRadius: 3, p: 3, flex: '1 1 60%', minWidth: 360 }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>标注趋势（近 30 天）</Typography>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={trend} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={4} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <RTooltip />
+                <Line type="monotone" dataKey="count" name="标注数" stroke="#6366f1" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+          <Paper sx={{ borderRadius: 3, p: 3, flex: '1 1 30%', minWidth: 280 }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>标注人占比</Typography>
+            {ranking.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={ranking.map(r => ({ name: r.displayName, value: r.count }))}
+                    cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value"
+                  >
+                    {ranking.map((r, i) => <Cell key={r.userId} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  </Pie>
+                  <RTooltip />
+                  <Legend verticalAlign="bottom" height={30} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box sx={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                暂无标注数据
+              </Box>
+            )}
+          </Paper>
+        </Box>
 
         {/* Annotation Ranking */}
         <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
