@@ -34,26 +34,33 @@ function MonitoringPage() {
   const [customEnd, setCustomEnd] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // 整页数据（与时间筛选无关）：仅首次加载，带整页 loading
   useEffect(() => {
     if (!token) return;
     setLoading(true);
     Promise.all([
       fetch('/api/monitoring?type=stats', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch('/api/monitoring?type=overview', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(
-        period === 'custom'
-          ? `/api/monitoring?type=ranking${customStart ? `&start=${customStart}` : ''}${customEnd ? `&end=${customEnd}` : ''}`
-          : `/api/monitoring?type=ranking&period=${period}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      ).then(r => r.json()),
       fetch('/api/monitoring?type=annotation-trend', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
-    ]).then(([s, o, r, tr]) => {
+    ]).then(([s, o, tr]) => {
       if (s.stats) setStats(s.stats);
       if (o.overview) setOverview(o.overview);
-      if (r.ranking) setRanking(r.ranking);
       if (tr.trend) setTrend(tr.trend);
     }).catch(console.error)
       .finally(() => setLoading(false));
+  }, [token]);
+
+  // 标注排行随时间筛选单独查询，不触发整页 loading（避免切换时页面跳到顶部）
+  useEffect(() => {
+    if (!token) return;
+    const url =
+      period === 'custom'
+        ? `/api/monitoring?type=ranking${customStart ? `&start=${customStart}` : ''}${customEnd ? `&end=${customEnd}` : ''}`
+        : `/api/monitoring?type=ranking&period=${period}`;
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(r => { if (r.ranking) setRanking(r.ranking); })
+      .catch(console.error);
   }, [token, period, customStart, customEnd]);
 
   if (loading) {
