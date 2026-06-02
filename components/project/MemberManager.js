@@ -19,7 +19,7 @@ import { tokenAtom } from '@/lib/auth-context';
 const ROLE_LABELS = { owner: '拥有者', editor: '编辑者', annotator: '标注员', viewer: '查看者' };
 const ROLE_COLORS = { owner: 'primary', editor: 'success', annotator: 'warning', viewer: 'default' };
 
-export default function MemberManager({ projectId, isOwner }) {
+export default function MemberManager({ projectId, isOwner, ownerId }) {
   const token = useAtomValue(tokenAtom);
   const [members, setMembers] = useState([]);
   const [users, setUsers] = useState([]);
@@ -43,13 +43,14 @@ export default function MemberManager({ projectId, isOwner }) {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch('/api/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch users:', err);
+      setUsers([]);
     }
   };
 
@@ -83,6 +84,7 @@ export default function MemberManager({ projectId, isOwner }) {
   };
 
   const availableUsers = users.filter(u =>
+    u.id !== ownerId &&
     !members.some(m => m.userId === u.id || m.user?.id === u.id)
   );
 

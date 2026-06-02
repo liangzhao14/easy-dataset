@@ -14,6 +14,7 @@ mock-login-callback.ts
 /test
 /dist
 /prisma/*.sqlite
+/prisma/*.sqlite.*
 .idea
 !local-db/empty.txt
 /local-db

@@ -1,5 +1,6 @@
 import { withAuth } from '@/lib/auth/middleware';
 import { addTeamMember, removeTeamMember, getTeam } from '@/lib/db/teams';
+import { logOperation } from '@/lib/audit/logger';
 
 // 获取团队成员列表
 export const GET = withAuth(async function (request, { params }) {
@@ -23,6 +24,17 @@ export const POST = withAuth(async function (request, { params }) {
 
   try {
     const member = await addTeamMember(params.teamId, userId, role || 'member');
+
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: 'add_team_member',
+      targetType: 'team',
+      targetId: userId,
+      teamId: params.teamId,
+      afterSnapshot: { userId, role: role || 'member' }
+    });
+
     return Response.json(member, { status: 201 });
   } catch (error) {
     if (error?.code === 'P2002') {
@@ -41,6 +53,16 @@ export const DELETE = withAuth(async function (request, { params }) {
 
   try {
     await removeTeamMember(params.teamId, userId);
+
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: 'remove_team_member',
+      targetType: 'team',
+      targetId: userId,
+      teamId: params.teamId
+    });
+
     return Response.json({ success: true });
   } catch (error) {
     if (error?.code === 'P2025') {

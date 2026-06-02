@@ -99,15 +99,20 @@ function AdminUsersPage() {
   };
 
   const handleResetPassword = async () => {
-    const password = prompt('请输入新密码（至少6位）：');
-    if (!password || password.length < 6) return alert('密码至少6位');
-    await fetch(`/api/admin/users/${selectedUser.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ password })
-    });
-    setResetOpen(false);
-    alert('密码已重置');
+    const password = prompt('请输入新密码（至少 8 位）：');
+    if (!password || password.length < 8) return alert('密码至少 8 位');
+    try {
+      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || '重置密码失败');
+      setResetOpen(false);
+      alert('密码已重置');
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   return (

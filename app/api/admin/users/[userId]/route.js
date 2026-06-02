@@ -2,6 +2,7 @@ import { withAuth } from '@/lib/auth/middleware';
 import { updateUser, getUserById, listUsers } from '@/lib/db/users';
 import { hashPassword } from '@/lib/auth';
 import { db } from '@/lib/db/index';
+import { logOperation } from '@/lib/audit/logger';
 
 // 编辑用户（displayName / role / status）
 export const PATCH = withAuth(async function (request, { params }) {
@@ -50,6 +51,16 @@ export const PATCH = withAuth(async function (request, { params }) {
     }
 
     await updateUser(userId, updateData);
+
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: updateData.status === 0 ? 'disable_user' : 'update_user',
+      targetType: 'user',
+      targetId: userId,
+      beforeSnapshot: { displayName: user.displayName, role: user.role, status: user.status },
+      afterSnapshot: updateData
+    });
 
     // 返回更新后的用户（不含密码）
     const updated = await getUserById(userId);
@@ -105,6 +116,15 @@ export const DELETE = withAuth(async function (request, { params }) {
     // 最后删除用户
     await db.users.delete({ where: { id: userId } });
 
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: 'delete_user',
+      targetType: 'user',
+      targetId: userId,
+      beforeSnapshot: { username: user.username, displayName: user.displayName }
+    });
+
     return Response.json({ success: true });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -131,6 +151,15 @@ export const POST = withAuth(async function (request, { params }) {
     }
 
     await updateUser(userId, { passwordHash: hashPassword(password) });
+
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: 'reset_password',
+      targetType: 'user',
+      targetId: userId
+    });
+
     return Response.json({ success: true });
   } catch (error) {
     console.error('Reset password error:', error);

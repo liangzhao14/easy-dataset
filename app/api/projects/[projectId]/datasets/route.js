@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDatasetsByPagination, updateDataset, getDatasetsById, getDatasetsCounts, getConfirmationStats } from '@/lib/db/datasets';
+import { generateDatasetForQuestion } from '@/lib/services/datasets';
 import { withAuth } from '@/lib/auth/middleware';
 import { logOperation, updateProjectLastOperator } from '@/lib/audit/logger';
 
@@ -100,3 +101,45 @@ export const PATCH = withAuth(async function (request) {
     return NextResponse.json({ error: error.message || 'Failed to update dataset' }, { status: 500 });
   }
 });
+
+// POST: 为单个问题同步生成数据集（问题列表「生成数据集」、自动蒸馏均调用此接口）
+export const POST = withAuth(
+  async function (request, { params }) {
+    try {
+      const user = request.user;
+      const { projectId } = params;
+      const { questionId, model, language } = await request.json();
+
+      if (!projectId) {
+        return NextResponse.json({ error: '项目ID不能为空' }, { status: 400 });
+      }
+      if (!questionId) {
+        return NextResponse.json({ error: '问题ID不能为空' }, { status: 400 });
+      }
+      if (!model) {
+        return NextResponse.json({ error: '缺少模型配置' }, { status: 400 });
+      }
+
+      // 复用答案生成服务（LLM 用量由 LLMClient 内部上报，无需重复埋点）
+      const result = await generateDatasetForQuestion(projectId, questionId, { model, language });
+
+      // 操作日志 + 项目最终操作人
+      await logOperation({
+        operatorId: user.id,
+        operatorName: user.displayName,
+        action: 'generate_dataset',
+        targetType: 'dataset',
+        targetId: result?.dataset?.id,
+        projectId,
+        afterSnapshot: { questionId, datasetId: result?.dataset?.id }
+      });
+      await updateProjectLastOperator(projectId, user.id, 'generate_dataset');
+
+      return NextResponse.json(result);
+    } catch (error) {
+      console.error('生成数据集失败:', String(error));
+      return NextResponse.json({ error: error.message || '生成数据集失败' }, { status: 500 });
+    }
+  },
+  { minProjectRole: 'editor' }
+);

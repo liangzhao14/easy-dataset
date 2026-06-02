@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Box, Typography, useTheme,
-  CircularProgress, FormControl, InputLabel, Select, MenuItem, ToggleButtonGroup, ToggleButton
+  CircularProgress, FormControl, FormHelperText, InputLabel, Select, MenuItem, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
 import { Person, Groups, Visibility } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
@@ -37,7 +37,7 @@ export default function CreateProjectDialog({ open, onClose }) {
       try {
         const [projRes, teamRes] = await Promise.all([
           fetch('/api/projects', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/teams', { headers: { Authorization: `Bearer ${token}` } })
+          fetch('/api/teams', { headers: { Authorization: `Bearer ${token}` } })
         ]);
         if (projRes.ok) setProjects(await projRes.json());
         if (teamRes.ok) setTeams(await teamRes.json());
@@ -113,7 +113,7 @@ export default function CreateProjectDialog({ open, onClose }) {
 
           {/* Team selector for team projects */}
           {formData.projectType === 'team' && (
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth sx={{ mb: 2 }} required error={!formData.teamId}>
               <InputLabel>选择团队</InputLabel>
               <Select name="teamId" value={formData.teamId} label="选择团队" onChange={handleChange}>
                 <MenuItem value=""><em>请选择团队</em></MenuItem>
@@ -121,6 +121,13 @@ export default function CreateProjectDialog({ open, onClose }) {
                   <MenuItem key={team.id} value={team.id}>{team.name}</MenuItem>
                 ))}
               </Select>
+              {!formData.teamId && (
+                <FormHelperText>
+                  {teams.length === 0
+                    ? '您当前不属于任何团队，请联系管理员加入团队后再创建团队项目'
+                    : '请选择团队后再创建'}
+                </FormHelperText>
+              )}
             </FormControl>
           )}
 

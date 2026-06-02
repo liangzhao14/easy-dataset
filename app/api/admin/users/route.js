@@ -1,6 +1,7 @@
 import { withAuth } from '@/lib/auth/middleware';
 import { listUsers, createUser, updateUser } from '@/lib/db/users';
 import { hashPassword } from '@/lib/auth';
+import { logOperation } from '@/lib/audit/logger';
 
 // 获取用户列表 - 仅管理员
 export const GET = withAuth(async function (request) {
@@ -57,6 +58,15 @@ export const POST = withAuth(async function (request) {
       displayName: displayName || username,
       passwordHash: hashPassword(password),
       role: role || 'user'
+    });
+
+    await logOperation({
+      operatorId: request.user.id,
+      operatorName: request.user.displayName,
+      action: 'create_user',
+      targetType: 'user',
+      targetId: user.id,
+      afterSnapshot: { username: user.username, role: user.role }
     });
 
     return Response.json({

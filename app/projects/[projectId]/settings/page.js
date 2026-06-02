@@ -121,7 +121,7 @@ export default function SettingsPage({ params }) {
       {activeTab === TABS.MODEL && <ModelSettings projectId={projectId} />}
       {activeTab === TABS.TASK && <TaskSettings projectId={projectId} />}
       {activeTab === TABS.PROMPTS && <PromptSettings projectId={projectId} />}
-      {activeTab === TABS.MEMBERS && <MemberManager projectId={projectId} isOwner={isOwner} />}
+      {activeTab === TABS.MEMBERS && <MemberManager projectId={projectId} isOwner={isOwner} ownerId={project?.ownerId} />}
     </Container>
   );
 }

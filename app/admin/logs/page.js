@@ -13,9 +13,9 @@ import { tokenAtom } from '@/lib/auth-context';
 
 const ACTION_LABELS = {
   create_project: '创建项目', update_project: '更新项目', delete_project: '删除项目',
-  confirm_dataset: '确认标注', unconfirm_dataset: '取消确认', update_dataset: '更新数据集',
-  create_user: '创建用户', update_user: '编辑用户', disable_user: '禁用用户',
-  create_team: '创建团队', delete_team: '删除团队', add_team_member: '添加成员', remove_team_member: '移除成员'
+  confirm_dataset: '确认标注', unconfirm_dataset: '取消确认', update_dataset: '更新数据集', generate_dataset: '生成数据集',
+  create_user: '创建用户', update_user: '编辑用户', disable_user: '禁用用户', delete_user: '删除用户', reset_password: '重置密码',
+  create_team: '创建团队', update_team: '编辑团队', delete_team: '删除团队', add_team_member: '添加成员', remove_team_member: '移除成员'
 };
 
 function AdminLogsPage() {
