@@ -18,6 +18,14 @@ const ACTION_LABELS = {
   create_team: '创建团队', update_team: '编辑团队', delete_team: '删除团队', add_team_member: '添加成员', remove_team_member: '移除成员'
 };
 
+const TARGET_LABELS = {
+  project: '项目',
+  dataset: '数据集',
+  user: '用户',
+  team: '团队',
+  file: '文件'
+};
+
 function AdminLogsPage() {
   const token = useAtomValue(tokenAtom);
   const [logs, setLogs] = useState([]);
@@ -100,7 +108,7 @@ function AdminLogsPage() {
                   <TableCell>
                     <Chip label={ACTION_LABELS[log.action] || log.action} size="small" color="primary" variant="outlined" />
                   </TableCell>
-                  <TableCell>{log.targetType}</TableCell>
+                  <TableCell>{TARGET_LABELS[log.targetType] || log.targetType}</TableCell>
                   <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
                     {log.targetId?.substring(0, 12)}...
                   </TableCell>

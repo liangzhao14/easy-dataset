@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import LLMClient from '@/lib/llm/core/index';
@@ -7,7 +8,7 @@ import { getModelConfigById } from '@/lib/db/model-config';
  * Stream answer for a specified model
  * Query param: model=A or model=B
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   const { projectId, taskId } = params;
   const { searchParams } = new URL(request.url);
   const modelType = searchParams.get('model'); // 'A' or 'B'
@@ -89,4 +90,4 @@ export async function GET(request, { params }) {
     console.error(`Model ${modelType} streaming call failed:`, error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

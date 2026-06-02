@@ -14,7 +14,7 @@ export const POST = withAuth(async function (request, { params }) {
 
   const member = await addProjectMember(params.projectId, userId, role || 'editor');
   return Response.json(member, { status: 201 });
-});
+}, { minProjectRole: 'owner' });
 
 // 移除成员
 export const DELETE = withAuth(async function (request, { params }) {
@@ -24,4 +24,4 @@ export const DELETE = withAuth(async function (request, { params }) {
 
   await removeProjectMember(params.projectId, userId);
   return Response.json({ success: true });
-});
+}, { minProjectRole: 'owner' });

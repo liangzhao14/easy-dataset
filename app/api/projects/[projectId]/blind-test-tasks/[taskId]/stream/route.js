@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import LLMClient from '@/lib/llm/core/index';
@@ -6,7 +7,7 @@ import { getModelConfigById } from '@/lib/db/model-config';
 /**
  * Stream answers from two models for the current question
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   const { projectId, taskId } = params;
 
   try {
@@ -210,4 +211,4 @@ export async function GET(request, { params }) {
     console.error('API error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

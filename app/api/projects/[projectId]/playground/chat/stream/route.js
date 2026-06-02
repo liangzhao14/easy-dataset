@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import LLMClient from '@/lib/llm/core/index';
 import { getModelConfigById } from '@/lib/db/model-config';
@@ -30,7 +31,7 @@ async function resolveLatestModelConfig(projectId, incomingModel = {}) {
 /**
  * Streaming chat endpoint.
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   const { projectId } = params;
 
   try {
@@ -86,4 +87,4 @@ export async function POST(request, { params }) {
     console.error('Failed to process stream chat request:', String(error));
     return NextResponse.json({ error: `Failed to process stream chat request: ${error.message}` }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
