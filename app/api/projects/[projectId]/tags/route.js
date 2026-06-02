@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getTags, createTag, updateTag, deleteTag } from '@/lib/db/tags';
 import { getQuestionsByTagName } from '@/lib/db/questions';
 
 // 获取项目的标签树
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -20,10 +21,10 @@ export async function GET(request, { params }) {
     console.error('Failed to obtain the label tree:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to obtain the label tree' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新项目的标签树
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -46,9 +47,9 @@ export async function PUT(request, { params }) {
     console.error('Failed to update tags:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to update tags' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -65,9 +66,9 @@ export async function POST(request, { params }) {
     console.error('Failed to obtain the label tree:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to obtain the label tree' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -99,4 +100,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

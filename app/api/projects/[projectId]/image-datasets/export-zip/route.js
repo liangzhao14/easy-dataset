@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getImageDatasetsForExport } from '@/lib/db/imageDatasets';
 import archiver from 'archiver';
@@ -8,7 +9,7 @@ import fs from 'fs';
 /**
  * 导出图片文件压缩包
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -82,4 +83,4 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });

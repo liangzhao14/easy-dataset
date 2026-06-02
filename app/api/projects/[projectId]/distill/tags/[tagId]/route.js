@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 /**
  * 更新标签接口
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, tagId } = params;
 
@@ -58,4 +59,4 @@ export async function PUT(request, { params }) {
     console.error('[标签编辑] 更新标签失败:', String(error));
     return NextResponse.json({ error: error.message || '更新标签失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

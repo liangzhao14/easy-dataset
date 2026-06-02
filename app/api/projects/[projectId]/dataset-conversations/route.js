@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 /**
  * 多轮对话数据集管理API
  */
@@ -13,7 +14,7 @@ import { generateMultiTurnConversation } from '@/lib/services/multi-turn/index';
 /**
  * 获取多轮对话数据集列表（支持分页和筛选）
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -62,12 +63,12 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * 创建多轮对话数据集
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -132,4 +133,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

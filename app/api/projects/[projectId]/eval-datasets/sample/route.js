@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { buildEvalQuestionWhere } from '@/lib/db/evalDatasets';
@@ -14,7 +15,7 @@ function shuffleArray(arr) {
   return result;
 }
 
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -121,4 +122,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

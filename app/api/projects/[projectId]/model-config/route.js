@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { createInitModelConfig, getModelConfigByProjectId, saveModelConfig } from '@/lib/db/model-config';
 import { DEFAULT_MODEL_SETTINGS, MODEL_PROVIDERS } from '@/constant/model';
@@ -16,7 +17,7 @@ function normalizeModelEndpoint(endpoint = '') {
 }
 
 // 获取模型配置列表
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     // 验证项目 ID
@@ -54,10 +55,10 @@ export async function GET(request, { params }) {
     console.error('Error obtaining model configuration:', String(error));
     return NextResponse.json({ error: 'Failed to obtain model configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 保存模型配置
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -100,4 +101,4 @@ export async function POST(request, { params }) {
     console.error('Error updating model configuration:', String(error));
     return NextResponse.json({ error: 'Failed to update model configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

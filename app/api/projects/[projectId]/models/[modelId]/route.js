@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getProjectRoot } from '@/lib/db/base';
 import path from 'path';
 import fs from 'fs/promises';
 
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, modelId } = params;
 
@@ -49,9 +50,9 @@ export async function GET(request, { params }) {
     console.error('Error getting model:', String(error));
     return NextResponse.json({ error: 'Failed to get model' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, modelId } = params;
 
@@ -117,9 +118,9 @@ export async function PUT(request, { params }) {
     console.error('Error updating model configuration:', String(error));
     return NextResponse.json({ error: 'Failed to update model configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, modelId } = params;
 
@@ -170,4 +171,4 @@ export async function DELETE(request, { params }) {
     console.error('Error deleting model:', String(error));
     return NextResponse.json({ error: 'Failed to delete model' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

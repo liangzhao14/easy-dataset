@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getGaPairsByFileId, toggleGaPairActive, saveGaPairs, createGaPairs } from '@/lib/db/ga-pairs';
 import { getUploadFileInfoById } from '@/lib/db/upload-files';
@@ -8,7 +9,7 @@ import { db } from '@/lib/db/index';
 /**
  * 生成文件的 GA 对
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId, fileId } = params;
     const { regenerate = false, appendMode = false, language = '中文' } = await request.json();
@@ -171,12 +172,12 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * 获取文件的 GA 对
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, fileId } = params;
 
@@ -194,12 +195,12 @@ export async function GET(request, { params }) {
     console.error('Error getting GA pairs:', String(error));
     return NextResponse.json({ error: 'Failed to get GA pairs' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * 更新/替换文件的所有 GA 对
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, fileId } = params;
     const body = await request.json();
@@ -263,12 +264,12 @@ export async function PUT(request, { params }) {
     logger.error('Error updating GA pairs:', error);
     return NextResponse.json({ error: error.message || 'Failed to update GA pairs' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * 切换 GA 对激活状态
  */
-export async function PATCH(request, { params }) {
+export const PATCH = withAuth(async function (request, { params }) {
   try {
     const { projectId, fileId } = params;
     const body = await request.json();
@@ -293,7 +294,7 @@ export async function PATCH(request, { params }) {
     console.error('Error toggling GA pair active status:', String(error));
     return NextResponse.json({ error: 'Failed to toggle GA pair active status' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // Helper function to read file content
 async function getFileContent(projectId, fileName) {

@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getUsedCustomTags } from '@/lib/db/datasets';
 
 /**
  * 获取项目中使用过的自定义标签
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -25,4 +26,4 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });

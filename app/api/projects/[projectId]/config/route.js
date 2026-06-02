@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getProject, updateProject, getTaskConfig } from '@/lib/db/projects';
 
 // 获取项目配置
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const projectId = params.projectId;
     const config = await getProject(projectId);
@@ -12,10 +13,10 @@ export async function GET(request, { params }) {
     console.error('获取项目配置失败:', String(error));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新项目配置
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const projectId = params.projectId;
     const newConfig = await request.json();
@@ -33,4 +34,4 @@ export async function PUT(request, { params }) {
     console.error('更新项目配置失败:', String(error));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

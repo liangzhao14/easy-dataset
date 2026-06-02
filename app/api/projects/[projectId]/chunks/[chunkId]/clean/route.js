@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import logger from '@/lib/util/logger';
 import cleanService from '@/lib/services/clean';
 
 // 为指定文本块进行数据清洗
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
 
@@ -37,4 +38,4 @@ export async function POST(request, { params }) {
     logger.error('Error cleaning data:', error);
     return NextResponse.json({ error: error.message || 'Error cleaning data' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

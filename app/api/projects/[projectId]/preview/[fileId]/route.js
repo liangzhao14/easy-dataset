@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
@@ -5,7 +6,7 @@ import { getProjectRoot } from '@/lib/db/base';
 import { getUploadFileInfoById } from '@/lib/db/upload-files';
 
 // 获取文件内容
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, fileId } = params;
 
@@ -39,4 +40,4 @@ export async function GET(request, { params }) {
     console.error('Failed to get text block content:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to get text block content' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

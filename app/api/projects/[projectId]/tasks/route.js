@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
@@ -36,7 +37,7 @@ function normalizeTaskModelInfo(modelInfo) {
 }
 
 // 获取任务配置
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -62,10 +63,10 @@ export async function GET(request, { params }) {
     console.error('Failed to obtain task configuration:', String(error));
     return NextResponse.json({ error: 'Failed to obtain task configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新任务配置
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -104,10 +105,10 @@ export async function PUT(request, { params }) {
     console.error('Failed to update task configuration:', String(error));
     return NextResponse.json({ error: 'Failed to update task configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 创建新任务
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const data = await request.json();
@@ -161,4 +162,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

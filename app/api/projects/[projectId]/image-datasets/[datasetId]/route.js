@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getImageDatasetById, updateImageDataset, deleteImageDataset } from '@/lib/db/imageDatasets';
 import { getProjectPath } from '@/lib/db/base';
@@ -5,7 +6,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 // 获取单个数据集详情
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, datasetId } = params;
 
@@ -42,10 +43,10 @@ export async function GET(request, { params }) {
     console.error('Failed to get dataset detail:', error);
     return NextResponse.json({ error: error.message || 'Failed to get dataset detail' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新数据集
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, datasetId } = params;
     const updates = await request.json();
@@ -86,10 +87,10 @@ export async function PUT(request, { params }) {
     console.error('Failed to update dataset:', error);
     return NextResponse.json({ error: error.message || 'Failed to update dataset' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 删除数据集
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, datasetId } = params;
 
@@ -106,4 +107,4 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete dataset:', error);
     return NextResponse.json({ error: error.message || 'Failed to delete dataset' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

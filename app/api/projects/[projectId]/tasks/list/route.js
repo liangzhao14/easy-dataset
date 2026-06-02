@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 // 获取项目的所有任务列表
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -60,4 +61,4 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });

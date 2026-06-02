@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -7,7 +8,7 @@ const prisma = new PrismaClient();
  * 批量编辑文本块内容
  * POST /api/projects/[projectId]/chunks/batch-edit
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -99,4 +100,4 @@ export async function POST(request, { params }) {
   } finally {
     await prisma.$disconnect();
   }
-}
+}, { minProjectRole: 'editor' });

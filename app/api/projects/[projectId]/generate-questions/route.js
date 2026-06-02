@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getProjectChunks } from '@/lib/file/text-splitter';
 import { getTaskConfig } from '@/lib/db/projects';
@@ -5,7 +6,7 @@ import { getChunkById } from '@/lib/db/chunks';
 import { generateQuestionsForChunk, generateQuestionsForChunkWithGA } from '@/lib/services/questions';
 
 // 批量生成问题
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -123,4 +124,4 @@ export async function POST(request, { params }) {
     console.error('Failed to generate questions:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to generate questions' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

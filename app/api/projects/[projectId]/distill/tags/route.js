@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { distillTagsPrompt } from '@/lib/llm/prompts/distillTags';
 import { db } from '@/lib/db';
@@ -8,7 +9,7 @@ const LLMClient = require('@/lib/llm/core');
 /**
  * 生成标签接口：根据顶级主题、某级标签构造指定数量的子标签
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -85,4 +86,4 @@ export async function POST(request, { params }) {
     console.error('[标签生成] 错误堆栈:', error.stack);
     return NextResponse.json({ error: error.message || '生成标签失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

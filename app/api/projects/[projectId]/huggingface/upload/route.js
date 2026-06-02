@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getProject } from '@/lib/db/projects';
 import { getDatasets } from '@/lib/db/datasets';
@@ -7,7 +8,7 @@ import os from 'os';
 import { uploadFiles, createRepo, checkRepoAccess } from '@huggingface/hub';
 
 // 上传数据集到 HuggingFace
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const projectId = params.projectId;
     const {
@@ -122,7 +123,7 @@ export async function POST(request, { params }) {
     console.error('Upload Faile:', String(error));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 格式化数据集
 function formatDataset(questions, formatType, systemPrompt, includeCOT, customFields) {

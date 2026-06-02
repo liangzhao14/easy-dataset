@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { deleteChunkById, getChunkByFileIds, getChunkById, getChunksByFileIds, updateChunkById } from '@/lib/db/chunks';
 
 // 获取文本块内容
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     // 验证参数
@@ -18,4 +19,4 @@ export async function POST(request, { params }) {
     console.error('Failed to get text block content:', String(error));
     return NextResponse.json({ error: String(error) || 'Failed to get text block content' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

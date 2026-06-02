@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import {
   getCustomPrompts,
@@ -10,7 +11,7 @@ import {
 } from '@/lib/db/custom-prompts';
 
 // 获取项目的自定义提示词
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -33,10 +34,10 @@ export async function GET(request, { params }) {
     console.error('获取自定义提示词失败:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 保存自定义提示词
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -74,10 +75,10 @@ export async function POST(request, { params }) {
     console.error('保存自定义提示词失败:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 删除自定义提示词
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -102,4 +103,4 @@ export async function DELETE(request, { params }) {
     console.error('删除自定义提示词失败:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

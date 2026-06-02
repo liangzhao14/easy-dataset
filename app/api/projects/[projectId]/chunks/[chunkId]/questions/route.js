@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getQuestionsForChunk } from '@/lib/db/questions';
 import logger from '@/lib/util/logger';
 import questionService from '@/lib/services/questions';
 
 // 为指定文本块生成问题
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
 
@@ -45,10 +46,10 @@ export async function POST(request, { params }) {
     logger.error('Error generating questions:', error);
     return NextResponse.json({ error: error.message || 'Error generating questions' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 获取指定文本块的问题
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
 
@@ -70,4 +71,4 @@ export async function GET(request, { params }) {
     console.error('Error getting questions:', String(error));
     return NextResponse.json({ error: error.message || 'Error getting questions' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

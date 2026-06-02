@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getEvalQuestionById, updateEvalQuestion, deleteEvalQuestion } from '@/lib/db/evalDatasets';
 import { db } from '@/lib/db/index';
@@ -6,7 +7,7 @@ import { db } from '@/lib/db/index';
  * Get evaluation dataset details by ID
  * Supports operateType=prev|next to navigate neighbors
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, evalId } = params;
     const { searchParams } = new URL(request.url);
@@ -62,12 +63,12 @@ export async function GET(request, { params }) {
     console.error('Failed to get eval question:', error);
     return NextResponse.json({ error: error.message || 'Failed to get eval question' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * Update evaluation dataset
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { evalId } = params;
     const data = await request.json();
@@ -89,12 +90,12 @@ export async function PUT(request, { params }) {
     console.error('Failed to update eval question:', error);
     return NextResponse.json({ error: error.message || 'Failed to update eval question' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * Delete evaluation dataset
  */
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { evalId } = params;
 
@@ -105,4 +106,4 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete eval question:', error);
     return NextResponse.json({ error: error.message || 'Failed to delete eval question' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

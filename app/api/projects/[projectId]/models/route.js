@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 import { getProjectRoot } from '@/lib/db/base';
 
 // 获取模型配置
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -44,10 +45,10 @@ export async function GET(request, { params }) {
     console.error('Error obtaining model configuration:', String(error));
     return NextResponse.json({ error: 'Failed to obtain model configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新模型配置
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -86,4 +87,4 @@ export async function PUT(request, { params }) {
     console.error('Error updating model configuration:', String(error));
     return NextResponse.json({ error: 'Failed to update model configuration' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

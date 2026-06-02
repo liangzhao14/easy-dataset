@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { getProjectRoot } from '@/lib/db/base';
 
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     if (!projectId) {
@@ -24,4 +25,4 @@ export async function GET(request, { params }) {
     console.error('Error checking Llama Factory config:', String(error));
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

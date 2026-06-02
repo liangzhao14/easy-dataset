@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import { buildEvalQuestionWhere } from '@/lib/db/evalDatasets';
@@ -48,7 +49,7 @@ function formatExportItem(item) {
  * Supports JSON, JSONL, and CSV
  * Uses batched streaming for large datasets
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -192,12 +193,12 @@ export async function POST(request, { params }) {
     console.error('Failed to export eval datasets:', error);
     return NextResponse.json({ code: 500, error: error.message || 'Export failed' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * Get export preview (count only)
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -228,4 +229,4 @@ export async function GET(request, { params }) {
     console.error('Failed to get export preview:', error);
     return NextResponse.json({ code: 500, error: error.message || 'Failed to get export preview' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

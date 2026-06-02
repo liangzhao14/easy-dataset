@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import {
   getDatasets,
@@ -12,7 +13,7 @@ import {
 /**
  * 获取导出数据集
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -37,12 +38,12 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * 获取标签统计信息
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -125,4 +126,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,7 +1,8 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-export async function POST(req, { params }) {
+export const POST = withAuth(async function (req, { params }) {
   try {
     const { projectId, datasetId } = params;
 
@@ -74,4 +75,4 @@ export async function POST(req, { params }) {
     console.error('Failed to copy dataset to eval:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

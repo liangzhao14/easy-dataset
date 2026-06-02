@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getImageDatasetsTagsByProject } from '@/lib/db/imageDatasets';
 
 // 获取项目中所有已使用的标签
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -34,4 +35,4 @@ export async function GET(request, { params }) {
     console.error('Failed to get tags:', error);
     return NextResponse.json({ error: error.message || 'Failed to get tags' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

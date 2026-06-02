@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { splitProjectFile, getProjectChunks } from '@/lib/file/text-splitter';
 import { getProject, updateProject } from '@/lib/db/projects';
@@ -5,7 +6,7 @@ import { getTags } from '@/lib/db/tags';
 import { handleDomainTree } from '@/lib/util/domain-tree';
 
 // 处理文本分割请求
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -57,10 +58,10 @@ export async function POST(request, { params }) {
     console.error('Text split error:', String(error));
     return NextResponse.json({ error: error.message || 'Text split failed' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 获取项目中的所有文本块
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -85,4 +86,4 @@ export async function GET(request, { params }) {
     console.error('Failed to get text chunks:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to get text chunks' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

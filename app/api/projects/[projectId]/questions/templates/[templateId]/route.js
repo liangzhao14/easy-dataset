@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import templateDb from '@/lib/db/questionTemplates';
 import { generateQuestionsFromTemplateEdit } from '@/lib/services/questions/template';
 
 // 获取单个模板
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { templateId } = params;
 
@@ -27,10 +28,10 @@ export async function GET(request, { params }) {
     console.error('Failed to get template:', error);
     return NextResponse.json({ error: error.message || 'Failed to get template' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新问题模板
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, templateId } = params;
     const data = await request.json();
@@ -84,10 +85,10 @@ export async function PUT(request, { params }) {
     console.error('Failed to update template:', error);
     return NextResponse.json({ error: error.message || 'Failed to update template' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 删除问题模板
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { templateId } = params;
 
@@ -107,4 +108,4 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete template:', error);
     return NextResponse.json({ error: error.message || 'Failed to delete template' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { batchDeleteQuestions } from '@/lib/db/questions';
 
 // 批量删除问题
-export async function DELETE(request) {
+export const DELETE = withAuth(async function (request) {
   try {
     const body = await request.json();
     const { questionIds } = body;
@@ -20,4 +21,4 @@ export async function DELETE(request) {
     console.error('Delete failed:', String(error));
     return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

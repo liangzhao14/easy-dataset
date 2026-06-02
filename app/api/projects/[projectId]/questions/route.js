@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import {
   getAllQuestionsByProjectId,
@@ -9,7 +10,7 @@ import {
 import { getImageById, getImageChunk } from '@/lib/db/images';
 
 // 获取项目的所有问题
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     // 验证项目ID
@@ -58,10 +59,10 @@ export async function GET(request, { params }) {
     console.error('Failed to get questions:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to get questions' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 新增问题
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -89,10 +90,10 @@ export async function POST(request, { params }) {
     console.error('Failed to create question:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to create question' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 更新问题
-export async function PUT(request) {
+export const PUT = withAuth(async function (request) {
   try {
     const body = await request.json();
     // 保存更新后的数据
@@ -107,4 +108,4 @@ export async function PUT(request) {
     console.error('更新问题失败:', String(error));
     return NextResponse.json({ error: error.message || '更新问题失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

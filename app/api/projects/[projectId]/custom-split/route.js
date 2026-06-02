@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { saveChunks, deleteChunksByFileId } from '@/lib/db/chunks';
 import path from 'path';
@@ -10,7 +11,7 @@ import { getProjectRoot } from '@/lib/db/base';
  * @param {Object} params - 路由参数
  * @returns {Promise<Response>} - 响应对象
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { fileId, fileName, content, splitPoints } = await request.json();
@@ -49,7 +50,7 @@ export async function POST(request, { params }) {
     console.error('自定义分块处理出错:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to process custom split request' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * 根据分块点生成自定义文本块

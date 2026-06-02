@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 /**
  * 单个多轮对话数据集操作API
  */
@@ -13,7 +14,7 @@ import {
 /**
  * 获取单个多轮对话数据集详情
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, conversationId } = params;
     const { searchParams } = new URL(request.url);
@@ -58,12 +59,12 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * 更新多轮对话数据集
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, conversationId } = params;
     const body = await request.json();
@@ -132,12 +133,12 @@ export async function PUT(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * 删除多轮对话数据集
  */
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, conversationId } = params;
 
@@ -180,4 +181,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

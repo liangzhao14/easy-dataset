@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getChunkByName } from '@/lib/db/chunks';
 
@@ -7,7 +8,7 @@ import { getChunkByName } from '@/lib/db/chunks';
  * @param {object} context 上下文，包含路径参数
  * @returns {Promise<NextResponse>} 响应对象
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -32,4 +33,4 @@ export async function GET(request, { params }) {
     console.error('根据名称获取文本块失败:', String(error));
     return NextResponse.json({ error: '获取文本块失败: ' + error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

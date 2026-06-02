@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { batchGenerateGaPairs } from '@/lib/services/ga/ga-pairs';
 import { getUploadFileInfoById } from '@/lib/db/upload-files'; // 导入单个文件查询函数
@@ -5,7 +6,7 @@ import { getUploadFileInfoById } from '@/lib/db/upload-files'; // 导入单个�
 /**
  * 批量生成多个文件的 GA 对
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -103,4 +104,4 @@ export async function POST(request, { params }) {
     console.error('Error batch generating GA pairs:', String(error));
     return NextResponse.json({ error: String(error) || 'Failed to batch generate GA pairs' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

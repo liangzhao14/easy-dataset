@@ -1,7 +1,8 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { getChunkContentsByNames } from '@/lib/db/chunks';
 import { NextResponse } from 'next/server';
 
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { chunkNames } = await request.json();
@@ -17,4 +18,4 @@ export async function POST(request, { params }) {
     console.error('批量获取文本块内容失败:', error);
     return NextResponse.json({ error: '批量获取文本块内容失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

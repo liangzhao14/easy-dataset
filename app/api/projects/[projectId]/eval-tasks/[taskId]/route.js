@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import { getEvalResultsByTaskId, getEvalResultsStats } from '@/lib/db/evalResults';
@@ -5,7 +6,7 @@ import { getEvalResultsByTaskId, getEvalResultsStats } from '@/lib/db/evalResult
 /**
  * Get evaluation task details and results
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -77,12 +78,12 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * Delete evaluation task
  */
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -124,12 +125,12 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * Interrupt evaluation task
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
     const data = await request.json();
@@ -173,4 +174,4 @@ export async function PUT(request, { params }) {
     console.error('Failed to operate evaluation task:', error);
     return NextResponse.json({ code: 500, error: 'Operation failed', message: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

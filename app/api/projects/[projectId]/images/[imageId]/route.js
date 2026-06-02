@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getImageDetailWithQuestions } from '@/lib/services/images';
 
 // 根据图片ID获取图片详情，包含问题列表和已标注数据
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, imageId } = params;
 
@@ -28,4 +29,4 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ error: error.message || 'Failed to get image details' }, { status: statusCode });
   }
-}
+}, { minProjectRole: 'viewer' });

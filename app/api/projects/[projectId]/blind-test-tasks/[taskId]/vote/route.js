@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 
@@ -6,7 +7,7 @@ import { db } from '@/lib/db/index';
  * vote: 'left' | 'right' | 'both_good' | 'both_bad'
  * Results are stored in EvalResults table
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
     const { vote, questionId, isSwapped, leftAnswer, rightAnswer } = await request.json();
@@ -151,4 +152,4 @@ export async function POST(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

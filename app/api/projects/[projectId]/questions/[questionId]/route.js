@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { deleteQuestion } from '@/lib/db/questions';
 
 // 删除单个问题
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, questionId } = params;
 
@@ -23,4 +24,4 @@ export async function DELETE(request, { params }) {
     console.error('Delete failed:', String(error));
     return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

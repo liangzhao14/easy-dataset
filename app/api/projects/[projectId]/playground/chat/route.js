@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import LLMClient from '@/lib/llm/core/index';
 import { getModelConfigById } from '@/lib/db/model-config';
@@ -28,7 +29,7 @@ async function resolveLatestModelConfig(projectId, incomingModel = {}) {
   }
 }
 
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -96,4 +97,4 @@ export async function POST(request, { params }) {
     console.error('Failed to process chat request:', String(error));
     return NextResponse.json({ error: `Failed to process chat request: ${error.message}` }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 // 获取任务详情
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -53,10 +54,10 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 更新任务状态
-export async function PATCH(request, { params }) {
+export const PATCH = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
     const data = await request.json();
@@ -127,10 +128,10 @@ export async function PATCH(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 删除任务
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -168,4 +169,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,6 +1,7 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -33,7 +34,7 @@ export async function POST(request, { params }) {
     console.error('Failed to export questions:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 获取全部问题（不限分页）
 async function getAllQuestions(projectId, searchTerm = '', chunkName = '', sourceType = 'all') {

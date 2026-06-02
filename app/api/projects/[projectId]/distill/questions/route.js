@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { distillQuestionsPrompt } from '@/lib/llm/prompts/distillQuestions';
 import { db } from '@/lib/db';
@@ -7,7 +8,7 @@ const LLMClient = require('@/lib/llm/core');
 /**
  * 生成问题接口：根据某个标签链路构造指定数量的问题
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -98,4 +99,4 @@ export async function POST(request, { params }) {
     console.error('生成问题失败:', String(error));
     return NextResponse.json({ error: error.message || '生成问题失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

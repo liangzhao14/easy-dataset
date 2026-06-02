@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 
 /**
  * Get current question info (including random swap info)
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   const { projectId, taskId } = params;
 
   try {
@@ -61,4 +62,4 @@ export async function GET(request, { params }) {
     console.error('Failed to fetch question info:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

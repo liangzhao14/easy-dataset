@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import templateDb from '@/lib/db/questionTemplates';
 import { generateQuestionsFromTemplate, checkTemplateGenerationAvailability } from '@/lib/services/questions/template';
 
 // 获取问题模板列表
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -30,10 +31,10 @@ export async function GET(request, { params }) {
     console.error('Failed to get templates:', error);
     return NextResponse.json({ error: error.message || 'Failed to get templates' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 创建问题模板
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const data = await request.json();
@@ -113,4 +114,4 @@ export async function POST(request, { params }) {
     console.error('Failed to create template:', error);
     return NextResponse.json({ error: error.message || 'Failed to create template' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getUploadFileInfoById } from '@/lib/db/upload-files';
 import { createGaPairs, getGaPairsByFileId } from '@/lib/db/ga-pairs';
@@ -5,7 +6,7 @@ import { createGaPairs, getGaPairsByFileId } from '@/lib/db/ga-pairs';
 /**
  * 批量手动添加 GA 对到多个文件
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -173,4 +174,4 @@ export async function POST(request, { params }) {
     console.error('Error batch adding manual GA pairs:', String(error));
     return NextResponse.json({ error: String(error) || 'Failed to batch add manual GA pairs' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

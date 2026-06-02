@@ -1,10 +1,11 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getEvalQuestionsWithPagination, getEvalQuestionsStats, deleteEvalQuestion } from '@/lib/db/evalDatasets';
 
 /**
  * Get project's evaluation dataset list (paginated)
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -51,12 +52,12 @@ export async function GET(request, { params }) {
     console.error('Failed to get eval datasets:', error);
     return NextResponse.json({ error: error.message || 'Failed to get eval datasets' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * Batch delete evaluation datasets
  */
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { ids } = await request.json();
 
@@ -78,12 +79,12 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete eval datasets:', error);
     return NextResponse.json({ error: error.message || 'Failed to delete eval datasets' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * Create a new evaluation dataset (or batch create)
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const body = await request.json();
@@ -161,4 +162,4 @@ export async function POST(request, { params }) {
     console.error('Failed to create eval dataset:', error);
     return NextResponse.json({ error: error.message || 'Failed to create eval dataset' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

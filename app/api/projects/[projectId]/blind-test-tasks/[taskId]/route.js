@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 
@@ -5,7 +6,7 @@ import { db } from '@/lib/db/index';
  * Get blind-test task details
  * Results are fetched from EvalResults table
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -95,12 +96,12 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });
 
 /**
  * Update blind-test task (interrupt/stop)
  */
-export async function PUT(request, { params }) {
+export const PUT = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
     const { action } = await request.json();
@@ -145,12 +146,12 @@ export async function PUT(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });
 
 /**
  * Delete blind-test task and its results
  */
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, taskId } = params;
 
@@ -187,4 +188,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'editor' });

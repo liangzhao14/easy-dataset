@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getImageDetailWithQuestions } from '@/lib/services/images';
@@ -5,7 +6,7 @@ import { getImageDetailWithQuestions } from '@/lib/services/images';
 const prisma = new PrismaClient();
 
 // 获取下一个有未标注问题的图片
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
 
@@ -38,4 +39,4 @@ export async function GET(request, { params }) {
     console.error('Failed to get next unanswered image:', error);
     return NextResponse.json({ error: error.message || 'Failed to get next unanswered image' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 /**
  * 多轮对话数据集导出API
  * 直接导出原始的 ShareGPT 格式数据集
@@ -9,7 +10,7 @@ import { getAllDatasetConversations } from '@/lib/db/dataset-conversations';
 /**
  * 导出多轮对话数据集
  */
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { searchParams } = new URL(request.url);
@@ -65,4 +66,4 @@ export async function GET(request, { params }) {
       { status: 500 }
     );
   }
-}
+}, { minProjectRole: 'viewer' });

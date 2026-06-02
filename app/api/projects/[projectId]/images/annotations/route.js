@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getImageById, getImageChunk } from '@/lib/db/images';
@@ -6,7 +7,7 @@ import { createImageDataset } from '@/lib/db/imageDatasets';
 const prisma = new PrismaClient();
 
 // 创建标注
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { imageId, questionId, question, answerType, answer, note } = await request.json();
@@ -86,4 +87,4 @@ export async function POST(request, { params }) {
     console.error('Failed to create annotation:', error);
     return NextResponse.json({ error: error.message || 'Failed to create annotation' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

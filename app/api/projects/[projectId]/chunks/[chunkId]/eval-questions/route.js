@@ -1,3 +1,4 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { generateEvalQuestionsForChunk } from '@/lib/services/eval';
 import logger from '@/lib/util/logger';
@@ -5,7 +6,7 @@ import logger from '@/lib/util/logger';
 /**
  * 为指定文本块生成测评题目
  */
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
 
@@ -32,4 +33,4 @@ export async function POST(request, { params }) {
     logger.error('Error generating eval questions:', error);
     return NextResponse.json({ error: error.message || 'Failed to generate eval questions' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

@@ -1,7 +1,8 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 
 // 获取默认提示词内容
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { searchParams } = new URL(request.url);
     const promptType = searchParams.get('promptType');
@@ -35,4 +36,4 @@ export async function GET(request, { params }) {
     console.error('获取默认提示词失败:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });

@@ -1,8 +1,9 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { deleteChunkById, getChunkById, updateChunkById } from '@/lib/db/chunks';
 
 // 获取文本块内容
-export async function GET(request, { params }) {
+export const GET = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
     // 验证参数
@@ -20,10 +21,10 @@ export async function GET(request, { params }) {
     console.error('Failed to get text block content:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to get text block content' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'viewer' });
 
 // 删除文本块
-export async function DELETE(request, { params }) {
+export const DELETE = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
     // 验证参数
@@ -40,10 +41,10 @@ export async function DELETE(request, { params }) {
     console.error('Failed to delete text block:', String(error));
     return NextResponse.json({ error: error.message || 'Failed to delete text block' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
 
 // 编辑文本块内容
-export async function PATCH(request, { params }) {
+export const PATCH = withAuth(async function (request, { params }) {
   try {
     const { projectId, chunkId } = params;
 
@@ -70,4 +71,4 @@ export async function PATCH(request, { params }) {
     console.error('编辑文本块失败:', String(error));
     return NextResponse.json({ error: error.message || '编辑文本块失败' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });

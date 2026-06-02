@@ -1,9 +1,10 @@
+import { withAuth } from '@/lib/auth/middleware';
 import { NextResponse } from 'next/server';
 import { getImageByName } from '@/lib/db/images';
 import imageService from '@/lib/services/images';
 
 // 生成图像数据集
-export async function POST(request, { params }) {
+export const POST = withAuth(async function (request, { params }) {
   try {
     const { projectId } = params;
     const { imageName, question, model, language = 'zh', previewOnly = false } = await request.json();
@@ -38,4 +39,4 @@ export async function POST(request, { params }) {
     console.error('Failed to generate image dataset:', error);
     return NextResponse.json({ error: error.message || 'Failed to generate dataset' }, { status: 500 });
   }
-}
+}, { minProjectRole: 'editor' });
