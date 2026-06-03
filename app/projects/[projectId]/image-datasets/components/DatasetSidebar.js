@@ -7,7 +7,7 @@ import MetadataEditor from './MetadataEditor';
 /**
  * 数据集右侧边栏组件
  */
-export default function DatasetSidebar({ dataset, projectId, onUpdate }) {
+export default function DatasetSidebar({ dataset, projectId, onUpdate, canAnnotate = true }) {
   return (
     <Box
       sx={{
@@ -22,7 +22,7 @@ export default function DatasetSidebar({ dataset, projectId, onUpdate }) {
       <MetadataInfo dataset={dataset} />
 
       {/* 操作卡片 */}
-      <MetadataEditor dataset={dataset} projectId={projectId} onUpdate={onUpdate} />
+      <MetadataEditor dataset={dataset} projectId={projectId} onUpdate={onUpdate} canAnnotate={canAnnotate} />
     </Box>
   );
 }

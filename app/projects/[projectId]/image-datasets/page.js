@@ -6,6 +6,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useAtomValue } from 'jotai';
+import { projectRoleAtom } from '@/lib/store';
+import { canWrite } from '@/lib/permissions';
 import { imageDatasetStyles } from './styles/imageDatasetStyles';
 import { useImageDatasets } from './hooks/useImageDatasets';
 import { useImageDatasetFilters } from './hooks/useImageDatasetFilters';
@@ -22,6 +25,7 @@ export default function ImageDatasetsPage() {
   const { projectId } = useParams();
   const router = useRouter();
   const { t } = useTranslation();
+  const writable = canWrite(useAtomValue(projectRoleAtom));
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
@@ -148,6 +152,7 @@ export default function ImageDatasetsPage() {
                   onView={handleViewDetails}
                   onDelete={handleDeleteDataset}
                   onEvaluate={handleEvaluateDataset}
+                  canWrite={writable}
                 />
               </Grid>
             ))}

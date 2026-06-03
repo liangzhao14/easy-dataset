@@ -22,7 +22,7 @@ function handleAnswer(dataset) {
 /**
  * 数据集主要内容组件
  */
-export default function DatasetContent({ dataset, projectId, onAnswerChange }) {
+export default function DatasetContent({ dataset, projectId, onAnswerChange, canWrite = true }) {
   const { t } = useTranslation();
   const [currentAnswer, setCurrentAnswer] = useState(() => handleAnswer(dataset));
   const [hasChanges, setHasChanges] = useState(false);
@@ -82,7 +82,7 @@ export default function DatasetContent({ dataset, projectId, onAnswerChange }) {
           </Typography>
 
           {/* 保存按钮 - 只在有变化时显示 */}
-          {hasChanges && (
+          {hasChanges && canWrite && (
             <Button
               variant="contained"
               color="primary"
@@ -101,16 +101,18 @@ export default function DatasetContent({ dataset, projectId, onAnswerChange }) {
         </Box>
 
         {/* 答案编辑器 */}
-        <AnswerInput
-          answerType={dataset.answerType || 'text'}
-          answer={currentAnswer}
-          onAnswerChange={handleAnswerChange}
-          labels={dataset.availableLabels || []}
-          customFormat={dataset.customFormat}
-          projectId={projectId}
-          imageName={dataset.imageName}
-          question={dataset.questionData}
-        />
+        <Box sx={{ pointerEvents: canWrite ? 'auto' : 'none', opacity: canWrite ? 1 : 0.7 }}>
+          <AnswerInput
+            answerType={dataset.answerType || 'text'}
+            answer={currentAnswer}
+            onAnswerChange={handleAnswerChange}
+            labels={dataset.availableLabels || []}
+            customFormat={dataset.customFormat}
+            projectId={projectId}
+            imageName={dataset.imageName}
+            question={dataset.questionData}
+          />
+        </Box>
 
         {/* 图片 */}
         <Box sx={{ mt: 3 }}>

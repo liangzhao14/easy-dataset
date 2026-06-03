@@ -16,7 +16,14 @@ import { selectedModelInfoAtom } from '@/lib/store';
 /**
  * 数据集评分、标签、备注综合组件
  */
-export default function DatasetRatingSection({ dataset, projectId, onUpdate, currentDataset }) {
+export default function DatasetRatingSection({
+  dataset,
+  projectId,
+  onUpdate,
+  currentDataset,
+  canAnnotate = true,
+  canWrite = true
+}) {
   const { t, i18n } = useTranslation();
   const [availableTags, setAvailableTags] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -255,7 +262,7 @@ export default function DatasetRatingSection({ dataset, projectId, onUpdate, cur
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           {t('datasets.rating', '评分')}
         </Typography>
-        <StarRating value={localScore} onChange={handleScoreChange} readOnly={loading} />
+        <StarRating value={localScore} onChange={handleScoreChange} readOnly={loading || !canAnnotate} />
       </Box>
 
       <Divider sx={{ my: 2 }} />
@@ -269,7 +276,7 @@ export default function DatasetRatingSection({ dataset, projectId, onUpdate, cur
           value={localTags}
           onChange={handleTagsChange}
           availableTags={availableTags}
-          readOnly={loading}
+          readOnly={loading || !canAnnotate}
           placeholder={t('datasets.addCustomTag', '添加自定义标签...')}
         />
       </Box>
@@ -280,7 +287,7 @@ export default function DatasetRatingSection({ dataset, projectId, onUpdate, cur
       <NoteInput
         value={localNote}
         onChange={handleNoteChange}
-        readOnly={loading}
+        readOnly={loading || !canAnnotate}
         placeholder={t('datasets.addNote', '添加备注...')}
       />
       <Divider sx={{ my: 2 }} />
@@ -289,7 +296,7 @@ export default function DatasetRatingSection({ dataset, projectId, onUpdate, cur
         color="primary"
         startIcon={<PlaylistAddIcon />}
         onClick={handleAddToEval}
-        disabled={addingToEval}
+        disabled={addingToEval || !canWrite}
         sx={{ py: 1, flex: 1 }}
       >
         {addingToEval ? t('common.processing') : t('datasets.addToEval')}
@@ -300,7 +307,7 @@ export default function DatasetRatingSection({ dataset, projectId, onUpdate, cur
         color="secondary"
         startIcon={<AutoFixHighIcon />}
         onClick={() => setVariantDialog({ open: true, data: null })}
-        disabled={loading}
+        disabled={loading || !canWrite}
         sx={{ py: 1, flex: 1 }}
       >
         {t('datasets.generateEvalVariant')}

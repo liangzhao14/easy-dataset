@@ -30,7 +30,8 @@ export default function ChunkListHeader({
   chunks = [], // 添加chunks参数，用于导出文本块
   selectedModel = {},
   onFilterChange = null,
-  activeFilterCount = 0
+  activeFilterCount = 0,
+  writable = true
 }) {
   const { t, i18n } = useTranslation();
 
@@ -257,6 +258,8 @@ export default function ChunkListHeader({
             width: { xs: '100%', sm: 'auto' }
           }}
         >
+          {writable && (
+            <>
           <Button
             variant="contained"
             color="primary"
@@ -347,6 +350,8 @@ export default function ChunkListHeader({
               </MenuItem>
             </Tooltip>
           </Menu>
+            </>
+          )}
 
           {/* 更多菜单按钮 */}
           <Tooltip title={t('common.more', { defaultValue: '更多操作' })}>
@@ -377,14 +382,18 @@ export default function ChunkListHeader({
               horizontal: 'right'
             }}
           >
-            <MenuItem onClick={handleBatchEdit} disabled={selectedChunks.length === 0}>
-              <EditIcon fontSize="small" sx={{ mr: 1 }} />
-              {t('batchEdit.batchEdit', { defaultValue: '批量编辑' })}
-            </MenuItem>
-            <MenuItem onClick={handleBatchDelete} disabled={selectedChunks.length === 0}>
-              <DeleteIcon fontSize="small" sx={{ mr: 1, color: 'error.main' }} />
-              {t('textSplit.batchDeleteChunks', { defaultValue: '批量删除' })}
-            </MenuItem>
+            {writable && (
+              <MenuItem onClick={handleBatchEdit} disabled={selectedChunks.length === 0}>
+                <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                {t('batchEdit.batchEdit', { defaultValue: '批量编辑' })}
+              </MenuItem>
+            )}
+            {writable && (
+              <MenuItem onClick={handleBatchDelete} disabled={selectedChunks.length === 0}>
+                <DeleteIcon fontSize="small" sx={{ mr: 1, color: 'error.main' }} />
+                {t('textSplit.batchDeleteChunks', { defaultValue: '批量删除' })}
+              </MenuItem>
+            )}
             <MenuItem onClick={handleExport} disabled={chunks.length === 0}>
               <DownloadIcon fontSize="small" sx={{ mr: 1 }} />
               {t('textSplit.exportChunks', { defaultValue: '导出文本块' })}

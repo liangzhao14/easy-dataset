@@ -51,6 +51,15 @@ export const PUT = withAuth(async function (request, { params }) {
     const { projectId, datasetId } = params;
     const updates = await request.json();
 
+    // 字段级权限：确认/打分/打标签/备注属于标注工作，annotator 可操作；
+    // 编辑答案等内容仍需 editor+。
+    const ANNOTATION_FIELDS = ['confirmed', 'score', 'tags', 'note'];
+    const roleLevels = { admin: 5, owner: 4, editor: 3, annotator: 2, viewer: 1 };
+    const isContentEdit = Object.keys(updates || {}).some(k => !ANNOTATION_FIELDS.includes(k));
+    if (isContentEdit && (roleLevels[request.projectRole] || 0) < roleLevels.editor) {
+      return NextResponse.json({ error: '标注员只能确认/打分/打标签/备注，不能编辑内容' }, { status: 403 });
+    }
+
     // 验证数据集存在且属于该项目
     const dataset = await getImageDatasetById(datasetId);
     if (!dataset || dataset.projectId !== projectId) {
@@ -87,7 +96,7 @@ export const PUT = withAuth(async function (request, { params }) {
     console.error('Failed to update dataset:', error);
     return NextResponse.json({ error: error.message || 'Failed to update dataset' }, { status: 500 });
   }
-}, { minProjectRole: 'editor' });
+}, { minProjectRole: 'annotator' });
 
 // 删除数据集
 export const DELETE = withAuth(async function (request, { params }) {

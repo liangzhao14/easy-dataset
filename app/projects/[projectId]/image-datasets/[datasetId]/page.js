@@ -3,6 +3,9 @@
 import { Container, Box, CircularProgress, Alert } from '@mui/material';
 import { useParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useAtomValue } from 'jotai';
+import { projectRoleAtom } from '@/lib/store';
+import { canWrite, canAnnotate } from '@/lib/permissions';
 import useImageDatasetDetails from '../hooks/useImageDatasetDetails';
 import ImageDatasetHeader from '../components/ImageDatasetHeader';
 import DatasetContent from '../components/DatasetContent';
@@ -11,6 +14,9 @@ import DatasetSidebar from '../components/DatasetSidebar';
 export default function ImageDatasetDetailPage() {
   const { projectId, datasetId } = useParams();
   const { t } = useTranslation();
+  const projectRole = useAtomValue(projectRoleAtom);
+  const writable = canWrite(projectRole);
+  const annotatable = canAnnotate(projectRole);
 
   const {
     currentDataset,
@@ -60,6 +66,8 @@ export default function ImageDatasetDetailPage() {
         onConfirm={handleConfirm}
         onUnconfirm={handleUnconfirm}
         onDelete={handleDelete}
+        canWrite={writable}
+        canAnnotate={annotatable}
       />
 
       {/* 主要布局：左右分栏 */}
@@ -68,6 +76,7 @@ export default function ImageDatasetDetailPage() {
         <DatasetContent
           dataset={currentDataset}
           projectId={projectId}
+          canWrite={writable}
           onAnswerChange={async newAnswer => {
             // 直接传递答案字符串，DatasetContent 已经处理了格式转换
             await updateDataset({ answer: newAnswer });
@@ -75,7 +84,7 @@ export default function ImageDatasetDetailPage() {
         />
 
         {/* 右侧固定侧边栏 */}
-        <DatasetSidebar dataset={currentDataset} projectId={projectId} onUpdate={updateDataset} />
+        <DatasetSidebar dataset={currentDataset} projectId={projectId} onUpdate={updateDataset} canAnnotate={annotatable} />
       </Box>
     </Container>
   );

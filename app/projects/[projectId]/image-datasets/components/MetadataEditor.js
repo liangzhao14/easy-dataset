@@ -8,7 +8,7 @@ import TagSelector from '@/components/datasets/TagSelector';
 import NoteInput from '@/components/datasets/NoteInput';
 import { useTranslation } from 'react-i18next';
 
-export default function MetadataEditor({ dataset, projectId, onUpdate }) {
+export default function MetadataEditor({ dataset, projectId, onUpdate, canAnnotate = true }) {
   const { t } = useTranslation();
   const [availableTags, setAvailableTags] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -126,7 +126,7 @@ export default function MetadataEditor({ dataset, projectId, onUpdate }) {
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
           {t('datasets.rating', '评分')}
         </Typography>
-        <StarRating value={localScore} onChange={handleScoreChange} readOnly={loading} />
+        <StarRating value={localScore} onChange={handleScoreChange} readOnly={loading || !canAnnotate} />
       </Box>
 
       <Divider sx={{ my: 2 }} />
@@ -140,7 +140,7 @@ export default function MetadataEditor({ dataset, projectId, onUpdate }) {
           value={localTags}
           onChange={handleTagsChange}
           availableTags={availableTags}
-          readOnly={loading}
+          readOnly={loading || !canAnnotate}
           placeholder={t('datasets.addCustomTag', '添加自定义标签...')}
         />
       </Box>
@@ -151,7 +151,7 @@ export default function MetadataEditor({ dataset, projectId, onUpdate }) {
       <NoteInput
         value={localNote}
         onChange={handleNoteChange}
-        readOnly={loading}
+        readOnly={loading || !canAnnotate}
         placeholder={t('datasets.addNote', '添加备注...')}
       />
     </Paper>

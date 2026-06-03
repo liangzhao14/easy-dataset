@@ -36,7 +36,8 @@ export default function ChunkList({
   questionFilter,
   setQuestionFilter,
   selectedModel,
-  onChunksUpdate
+  onChunksUpdate,
+  writable = true
 }) {
   const theme = useTheme();
   const [page, setPage] = useState(1);
@@ -341,6 +342,7 @@ export default function ChunkList({
         selectedModel={selectedModel}
         onFilterChange={handleFilterChange}
         activeFilterCount={activeFilterCount}
+        writable={writable}
       />
 
       <Grid container spacing={2}>
@@ -358,6 +360,7 @@ export default function ChunkList({
               onDataCleaning={() => onDataCleaning && onDataCleaning([chunk.id])}
               projectId={projectId}
               selectedModel={selectedModel}
+              writable={writable}
             />
           </Grid>
         ))}

@@ -12,7 +12,8 @@ export default function ImageDatasetCard({
   onClick,
   onView = () => {},
   onDelete = () => {},
-  onEvaluate = () => {}
+  onEvaluate = () => {},
+  canWrite = true
 }) {
   const { t } = useTranslation();
 
@@ -178,25 +179,27 @@ export default function ImageDatasetCard({
                 </IconButton>
               </Tooltip>
 
-              <Tooltip title={t('imageDatasets.delete', '删除')} placement="top">
-                <IconButton
-                  size="small"
-                  onClick={e => {
-                    e.stopPropagation();
-                    onDelete(dataset.id);
-                  }}
-                  sx={{
-                    p: 0.5,
-                    borderRadius: 1,
-                    color: '#d32f2f',
-                    '&:hover': {
-                      backgroundColor: 'rgba(211, 47, 47, 0.1)'
-                    }
-                  }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              {canWrite && (
+                <Tooltip title={t('imageDatasets.delete', '删除')} placement="top">
+                  <IconButton
+                    size="small"
+                    onClick={e => {
+                      e.stopPropagation();
+                      onDelete(dataset.id);
+                    }}
+                    sx={{
+                      p: 0.5,
+                      borderRadius: 1,
+                      color: '#d32f2f',
+                      '&:hover': {
+                        backgroundColor: 'rgba(211, 47, 47, 0.1)'
+                      }
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </Box>
         </Box>

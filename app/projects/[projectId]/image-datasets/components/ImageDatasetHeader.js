@@ -21,7 +21,9 @@ export default function ImageDatasetHeader({
   onNavigate,
   onConfirm,
   onUnconfirm,
-  onDelete
+  onDelete,
+  canWrite = true,
+  canAnnotate = true
 }) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -59,7 +61,7 @@ export default function ImageDatasetHeader({
             <Button
               variant="outlined"
               color="warning"
-              disabled={unconfirming}
+              disabled={unconfirming || !canAnnotate}
               onClick={onUnconfirm}
               startIcon={unconfirming ? <CircularProgress size={16} /> : <UndoIcon />}
               sx={{ mr: 1 }}
@@ -67,12 +69,12 @@ export default function ImageDatasetHeader({
               {unconfirming ? t('common.unconfirming', '取消中...') : t('datasets.unconfirm', '取消确认')}
             </Button>
           ) : (
-            <Button variant="contained" color="primary" disabled={confirming} onClick={onConfirm} sx={{ mr: 1 }}>
+            <Button variant="contained" color="primary" disabled={confirming || !canAnnotate} onClick={onConfirm} sx={{ mr: 1 }}>
               {confirming ? <CircularProgress size={24} /> : t('datasets.confirmSave', '确认保留')}
             </Button>
           )}
 
-          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={onDelete}>
+          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={onDelete} disabled={!canWrite}>
             {t('common.delete', '删除')}
           </Button>
         </Box>

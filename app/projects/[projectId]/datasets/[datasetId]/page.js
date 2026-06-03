@@ -178,6 +178,8 @@ export default function DatasetDetailsPage({ params }) {
           <DatasetRatingSection
             dataset={currentDataset}
             projectId={projectId}
+            canAnnotate={annotatable}
+            canWrite={writable}
             onUpdate={() => {
               // 更新成功后刷新数据，保持页面状态同步
               // 这里可以调用 useDatasetDetails 的刷新逻辑

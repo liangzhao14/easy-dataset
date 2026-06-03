@@ -80,6 +80,7 @@ export default function ChunkCard({
   onDataCleaning,
   onEdit,
   onGenerateEvalQuestions, // 新增：生成测评题目的回调
+  writable = true,
   projectId,
   selectedModel // 添加selectedModel参数
 }) {
@@ -328,6 +329,8 @@ export default function ChunkCard({
             </IconButton>
           </Tooltip>
 
+          {writable && (
+            <>
           <Tooltip
             title={
               selectedModel?.id
@@ -431,6 +434,8 @@ export default function ChunkCard({
               <DeleteIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+            </>
+          )}
         </CardActions>
       </Card>
 

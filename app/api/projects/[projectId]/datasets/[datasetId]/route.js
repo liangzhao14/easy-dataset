@@ -95,4 +95,5 @@ export const PATCH = withAuth(async function (request, { params }) {
       { status: 500 }
     );
   }
-}, { minProjectRole: 'editor' });
+  // 仅处理评分/标签/备注，属于标注工作，annotator 即可操作（编辑内容/删除仍走 editor 接口）
+}, { minProjectRole: 'annotator' });
