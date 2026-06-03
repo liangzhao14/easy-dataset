@@ -43,3 +43,4 @@ backups/
 deploy-bundle/
 deploy-bundle.tgz
 *.tar
+*.tar.gz
