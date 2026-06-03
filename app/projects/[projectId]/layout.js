@@ -3,7 +3,7 @@
 import AuthGuard from '@/components/auth/AuthGuard';
 import Navbar from '@/components/Navbar/index';
 import { useState, useEffect } from 'react';
-import { Box, CircularProgress, Typography, Button } from '@mui/material';
+import { Box, CircularProgress, Typography, Button, Alert } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useSetAtom, useAtomValue } from 'jotai';
@@ -106,6 +106,13 @@ function ProjectLayoutInner({ children, params }) {
     <>
       <Navbar projects={projects} currentProject={projectId} />
       <Box component="main" sx={{ pt: 2 }}>
+        {currentProject && ['viewer', 'annotator'].includes(currentProject.myRole) && (
+          <Alert severity="info" sx={{ mx: 3, mb: 1 }}>
+            {currentProject.myRole === 'viewer'
+              ? '您是本项目的「查看者」，仅可浏览；新增 / 编辑 / 生成 / 删除等写操作会被拒绝。'
+              : '您是本项目的「标注者」，可标注 / 确认数据集；生成 / 编辑 / 删除等其他写操作会被拒绝。'}
+          </Alert>
+        )}
         {children}
       </Box>
     </>
