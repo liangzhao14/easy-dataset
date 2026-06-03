@@ -1,0 +1,37 @@
+# 隔离内网 / 离线部署专用：不构建，直接使用 `docker load` 载入的镜像。
+#
+# 用法（在内网服务器，已 `docker load` 载入 easy-dataset:local 之后）：
+#   docker compose -f docker-compose.offline.yml up -d        # Compose v2
+#   docker-compose -f docker-compose.offline.yml up -d        # 仅有 Compose v1 时
+#
+# 注意：
+#   - 与本文件同目录必须有 .env.local，且含 JWT_SECRET（>=32 位随机），否则容器拒绝启动。
+#   - 镜像必须与服务器 CPU 架构一致（aarch64 服务器需用 --platform linux/arm64 构建）。
+#   - Compose v1 会忽略 deploy.resources（不影响运行）；老 Docker 也可改用 README 里的 docker run 命令。
+#   - prisma/ 与 local-db/ 两个挂载目录即全部持久化数据，备份就备这两个目录。
+services:
+  easy-dataset:
+    image: easy-dataset:local
+    container_name: easy-dataset
+    restart: unless-stopped
+    ports:
+      - '1717:1717'
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./prisma:/app/prisma
+      - ./local-db:/app/local-db
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:1717/api/auth/init >/dev/null 2>&1 || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
