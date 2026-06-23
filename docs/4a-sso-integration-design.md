@@ -67,6 +67,24 @@ signInfo = MD5(version + appKey + appMethod + timestamp + format + appSecret)   
 ```
 `appMethod` = 当次调用的端点路径（如 `/authcenter/getOauth2Token`、`/authcenter/getOauth2UserInfo`）。Node 直接用 `crypto` 实现 MD5，**不需要那套 Java/.Net SDK**。
 
+### 4.3 推荐默认值（凭证到位前先按此搭框架，全部做成可切换）
+
+> 中广核中台有**两条签名线**，参数惯例不同：**A. OAuth 单点登录接入**（BS 指南 `getOauth2*`，本项目走这条）/ **B. 通用微服务调用**（微服务手册 SDK 调业务接口）。两条线共用同一套网关签名头，但取值惯例不同——**出现矛盾时一律以 BS 指南的 `getOauth2Token` 请求样例为准**。
+
+| 参数 | 推荐默认 | 依据 | 可切换 |
+|---|---|---|---|
+| `timestamp` | **epoch 秒（10位）** | BS 样例 `1593668975`；微服务手册的 `yyyy-MM-dd HH:mm:ss` 属 B 线 | ✅ `CGN_4A_TIMESTAMP_FORMAT=epoch_seconds\|datetime` |
+| `version` | **`1`** | BS OAuth 样例头 `version: 1`；`v1.0` 属 B 线 | ✅ `CGN_4A_VERSION` |
+| `appMethod` | **当次端点路径** | 标准 AEP 语义=当前 URL；样例里的 `getOriginalForSign` 判定为文档残留 | ✅ 常量映射，**最需联调确认** |
+| `appIdParam` | **必传，带上** | CSP 申请发放（样例 `1262546119972360194`） | env 提供 |
+| HTTP method | **POST** | BS 样例 `POST /authcenter/getOauth2Token` | `CGN_4A_HTTP_METHOD` |
+| `format` | `json` | 两份一致 | `CGN_4A_FORMAT` |
+| `tenantId` | `1` | 两份样例 | `CGN_4A_TENANT_ID` |
+
+**signInfo 公式（两份一致、确定）**：`md5(version + appKey + appMethod + timestamp + format + appSecret)` 小写 hex；注意 `secretKey == appSecret`。
+
+**真实取值最终以 CSP 领到的密钥包说明为准**——领到密钥时上述争议大概率自动消解，所以"凭证到位前不纠结、搭好可切换框架"是正常节奏。
+
 ## 5. 数据模型改动（最小）
 
 `prisma/schema.prisma` 的 `Users` 增加 2 个安全字段（`db:push` 非破坏性）：
@@ -95,6 +113,14 @@ model Users {
 // signInfo = md5(version + appKey + appMethod + timestamp + format + appSecret)
 buildGatewayHeaders(appMethod) → { requestId, version, appId, appMethod, timestamp, format, signInfo, appKey, appCode, tenantId, appIdParam }
 ```
+
+**实现约定（对齐 §4.3 推荐默认）：**
+- `version`/`appId`/`appKey`/`appSecret`/`appCode`/`tenantId`/`appIdParam`/`format` 全部从 `config.js` 读 env，不硬编码。
+- `requestId`：每次调用随机生成（`crypto.randomUUID()`）。
+- `timestamp`：按 `CGN_4A_TIMESTAMP_FORMAT` 生成——`epoch_seconds`(默认) = `Math.floor(Date.now()/1000)`；`datetime` = `yyyy-MM-dd HH:mm:ss`。**同一次调用，signInfo 内与请求头里必须用同一个 timestamp 值。**
+- `appMethod`：由调用方按端点传入（token=`/authcenter/getOauth2Token`，userinfo=`/authcenter/getOauth2UserInfo`，logout=`/authcenter/userLogout`），不写死单一值，便于联调按 §10 结论调整。
+- `signInfo`：`crypto.createHash('md5').update(version+appKey+appMethod+timestamp+format+appSecret).digest('hex')`。
+- **联调第一步先对样例**：用 4A 提供的完整样例输入算 signInfo，与样例输出逐字节核对一致后，再换真实参数发请求——这是排查 401 最快的办法。
 
 ### 6.3 新增 4A 客户端 `lib/auth/4a/client.js`
 - `getToken(code)` → ② 换 token（带中台头 + 自签证书 agent）
@@ -166,9 +192,10 @@ CGN_4A_APP_SECRET=
 CGN_4A_APP_ID=
 CGN_4A_APP_CODE=
 CGN_4A_TENANT_ID=1
-CGN_4A_APP_ID_PARAM=                  # ⚠️ 待确认：换 token 头是否必须（见 §10）
-CGN_4A_VERSION=1.0
+CGN_4A_APP_ID_PARAM=                  # CSP 申请发放；推荐带上（见 §4.3 / §10）
+CGN_4A_VERSION=1                      # 推荐 1（OAuth 线）；微服务线为 v1.0，以 CSP 密钥包为准
 CGN_4A_FORMAT=json
+CGN_4A_TIMESTAMP_FORMAT=epoch_seconds # epoch_seconds(推荐,10位秒) | datetime(yyyy-MM-dd HH:mm:ss)
 
 # === 内网自签证书 ===
 CGN_4A_CA_CERT=/etc/easydataset/cgn-4a-ca.pem   # 推荐：pin 内网 CA
@@ -187,11 +214,13 @@ CGN_4A_INSECURE_TLS=false             # 仅测试可临时 true
 
 ## 10. 外部依赖与待确认项（联调前必须钉死）
 
-**待向 4A 负责人确认（王伟东 P624247 / 贺军 P633932）：**
-1. **`appIdParam` 是否为换 token/取用户的必传头**——手册 §3.4 原始样例里有，但 `oauthcfg.properties` 模板没列。缺它可能 401。
-2. **`timestamp` 格式**——BS 指南换 token 样例用 **epoch 秒**（`1593668975`），微服务手册的 signInfo 又写 `yyyy-MM-dd HH:mm:ss`。**两文档不一致**，且 signInfo 必须与请求头里送的 timestamp 字符串完全一致。默认按 epoch 秒，需确认。
-3. **`tenantId` 取值**——样例为 `1`，确认本应用是否也是 1。
-4. **内网 CA 证书**——拿到 4A/中台的内网 CA，避免线上用 `INSECURE_TLS`。
+**待向 4A 负责人确认（王伟东 P624247 / 贺军 P633932）：**（原文核对见 `/tmp/4a_microservice.md`、`/tmp/4a_bs.md`，行号已注；推荐默认见 §4.3）
+1. **`appMethod` 该填什么**（最关键）——BS 指南请求样例（`4a_bs.md:284`）是 `POST /authcenter/getOauth2Token`，但同一样例的 `appMethod` 头（`:292`）却填 `/authcenter/getOriginalForSign`（与请求端点不符）。推荐按"当次端点路径"，但若它实为某固定值，signInfo 会直接对不上 → 401。
+2. **`appIdParam` 是否必传**——**BS 指南**样例（`4a_bs.md:307`）明确列 `appIdParam: 1262546119972360194 ---中台CSP申请`；微服务手册的请求头是截图（`image18.png`）、`oauthcfg.properties` 是 emf 图、文本取不到。推荐带上。
+3. **`timestamp` 格式**——BS 指南样例（`4a_bs.md:294`）用 **epoch 秒** `1593668975`；微服务手册（`4a_microservice.md:421`）写 `yyyy-MM-dd HH:mm:ss`。**两份冲突**，signInfo 内与请求头须同值。推荐 epoch 秒（OAuth 线）。
+4. **`version` 取值**——BS OAuth 样例头 `version: 1`；微服务手册写 `v1.0`。推荐 `1`，需确认。
+5. **`tenantId` 取值**——样例为 `1`，确认本应用是否也是 1。
+6. **内网 CA 证书**——拿到 4A/中台的内网 CA，避免线上用 `INSECURE_TLS`。
 
 **线下申请流程（参考《配置参数申请流程》，凭证从这里来）：**
 - [ ] IDP 立项 / 维护系统（需「运维工程师」权限，找 IDP 工程师扈志芳 P633802 授权）
