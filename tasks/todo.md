@@ -19,9 +19,9 @@
 - [ ] 0.5 `tenantId` 本应用取值（样例为 1）（§10.5）
 - [ ] 0.6 索取内网 CA 证书，避免上线用 INSECURE_TLS（§10.6）
 
-## P1 数据模型（零密钥）
-- [ ] 1.1 `prisma/schema.prisma` Users 加 `authSource String @default("local")` + `orgName String?`
-      → **验证**：`pnpm db:push` 成功；Prisma Studio 见两列；存量用户 authSource=local
+## P1 数据模型（零密钥）✅
+- [x] 1.1 `prisma/schema.prisma` Users 加 `authSource String @default("local")` + `orgName String?`
+      → **已验证**：`prisma db push` 成功；PRAGMA 见 authSource(NOT NULL default 'local')/orgName(nullable)；存量行默认 local
 - [ ] 1.2 注意 Electron 打包另需 `pnpm db:template`（本接入面向 Web/Docker，暂不做）
 
 ## P2 4A 核心库（零密钥可写+单测）
