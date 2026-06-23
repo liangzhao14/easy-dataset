@@ -34,18 +34,13 @@
       → ⚠️ **坑 13.1**：Node-only（https/fs），**绝不能被 middleware import**
       → 注：业务参数默认走 query string、appMethod 取 URL pathname；form/json 与 appMethod 固定值待 P0/联调确认
 
-## P3 路由（骨架零密钥，真连需密钥）
-- [ ] 3.1 `app/api/auth/4a/login/route.js` GET：`is4AEnabled` 短路；生成 `state` 写短时 httpOnly Cookie（**SameSite=Lax** 坑 13.4）；拼 authorize URL（redirect_uri URLEncode）；带 `returnTo`；302 到 `CGN_4A_AUTHORIZE_URL`
-      → **验证**：点击 → 302 到 uap-t 且带 state；state cookie 存在
-- [ ] 3.2 `app/api/auth/4a/callback/route.js` GET：
-      - 校验 state（比对 cookie）
-      - `getToken`→`getUserInfo`
-      - **returnTo 同源校验**（坑 13.5：必须 `/` 开头、非 `//`、非 `/\`）
-      - 自动建号/复用（**upsert 防并发竞态** 坑 13.6；`displayName` 空则兜底 usercode；映射 username=usercode/orgName=orgname/authSource='4a'/role='user'，**不建 ProjectMembers**）
-      - `status!==1` → 渲染"账号已禁用"页（**不调 userLogout**，手册 4.2.4）
-      - `createToken` → 写会话 Cookie（**HttpOnly;Secure;SameSite=Lax** 坑 13.2）→ 302 returnTo
-      → **验证(无密钥)**：mock client 注入假 userinfo，单测 建号/复用/status/竞态 各分支
-      → **验证(需密钥)**：首登后 Users 出现工号账号 role=user、无 ProjectMembers、能进首页
+## P3 路由（骨架完成 ✅，真连需密钥）
+新增辅助：`lib/auth/cookies.js`（会话/state cookie 属性 + safeReturnTo，edge 安全）、`lib/auth/4a/user.js`（upsertSsoUser 建号）
+- [x] 3.1 `app/api/auth/4a/login/route.js` GET：`is4AEnabled` 短路；生成 `state` 写短时 httpOnly Cookie（**SameSite=Lax** 坑 13.4）；拼 authorize URL（redirect_uri URLEncode）；带 `returnTo`；302 到 `CGN_4A_AUTHORIZE_URL`
+      → **已验证(dev真跑)**：302 到 authorize 且带 state；`set-cookie: ed_4a_state; Max-Age=600; HttpOnly; SameSite=lax`
+- [x] 3.2 `app/api/auth/4a/callback/route.js` GET：state 校验 + returnTo 同源校验(13.5) + upsert 建号(13.6,displayName兜底,authSource=4a/role=user,不建 ProjectMembers) + status≠1 提示不调 userLogout + createToken 写会话 Cookie(HttpOnly;Secure;SameSite=Lax 13.2) → 302 returnTo
+      → **已验证(dev真跑)**：state 失配 → 302 `/login?error=...` 且清 state cookie
+      → ⏳ **待密钥**：getToken/getUserInfo 真连 + 建号→写会话整条链路（P7 联调）
 
 ## P4 会话网关 + token 交接（零密钥）
 - [ ] 4.1 `middleware.js`：matcher 纳入页面路由；**仅 jose 验签会话 Cookie，不查库、不 import Prisma/Node/4a-client**（坑 13.1）；无效→302 `/api/auth/4a/login?returnTo=...`；白名单放行 `/login`、`/api/auth/4a/*`、静态、禁用提示页（坑 13.6）；`is4AEnabled()===false` 时短路放行（坑 13.6）
