@@ -1,5 +1,7 @@
+import { NextResponse } from 'next/server';
 import { createToken, comparePassword } from '@/lib/auth';
 import { getUserByUsername, updateUser } from '@/lib/db/users';
+import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookies';
 
 // 简单的内存级登录失败计数（防止暴力破解）
 // 生产环境建议替换为 Redis 或数据库存储
@@ -103,7 +105,7 @@ export async function POST(request) {
 
     const token = await createToken(user);
 
-    return Response.json({
+    const res = NextResponse.json({
       token,
       user: {
         id: user.id,
@@ -112,6 +114,9 @@ export async function POST(request) {
         role: user.role
       }
     });
+    // 同时写会话 Cookie：使 4A 网关启用时本地后门登录也能通过 middleware（§6.7）
+    res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
+    return res;
   } catch (error) {
     console.error('Login error:', error);
     return Response.json({ error: '登录失败' }, { status: 500 });
