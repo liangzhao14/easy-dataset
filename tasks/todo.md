@@ -42,13 +42,13 @@
       → **已验证(dev真跑)**：state 失配 → 302 `/login?error=...` 且清 state cookie
       → ⏳ **待密钥**：getToken/getUserInfo 真连 + 建号→写会话整条链路（P7 联调）
 
-## P4 会话网关 + token 交接（零密钥）
-- [ ] 4.1 `middleware.js`：matcher 纳入页面路由；**仅 jose 验签会话 Cookie，不查库、不 import Prisma/Node/4a-client**（坑 13.1）；无效→302 `/api/auth/4a/login?returnTo=...`；白名单放行 `/login`、`/api/auth/4a/*`、静态、禁用提示页（坑 13.6）；`is4AEnabled()===false` 时短路放行（坑 13.6）
-      → **验证**：未登录访问任意页面被跳 4A；有效会话放行；关 4A 时本地仍可开
-- [ ] 4.2 `app/api/auth/me/route.js`：除 Bearer 外支持**会话 Cookie 鉴权**，并在 Cookie 场景**回传 token**供前端存 localStorage（坑 13.3 token 交接缝）
-      → **验证**：仅带会话 Cookie 时 /api/auth/me 返回 user + token
-- [ ] 4.3 `withAuth` **保持 Bearer-only**（§6.6 不做，防 CSRF 回退 坑 13.2）
-      → **验证**：带 Bearer 正常；仅带 Cookie 的写请求被拒
+## P4 会话网关 + token 交接（零密钥）✅
+- [x] 4.1 `middleware.js`：**仅 jose 验签会话 Cookie，不查库、不 import Prisma/Node/4a-client**（坑 13.1）；无效→302 `/api/auth/4a/login?returnTo=...`；白名单 `/login`、`/init`（`/api`+静态已被 matcher 排除）；`is4AEnabled()===false` 短路放行（坑 13.6）
+      → **已验证(dev真跑)**：无会话 /projects→302 4a login(returnTo=%2Fprojects)；/login→200 放行；有效会话 cookie→404(放行,jose 验签在 Edge 跑通)；dev 日志无 Node 模块告警
+- [x] 4.2 `app/api/auth/me/route.js`：除 Bearer 外支持**会话 Cookie 鉴权**，Cookie 场景**回传 token**（坑 13.3）
+      → **已验证(dev真跑)**：带会话 cookie→200 返回 user(lisi)+token；无凭证→401
+- [x] 4.3 `withAuth` **保持 Bearer-only**（§6.6 不做，防 CSRF 回退 坑 13.2）
+      → **已确认(代码未动)**：getCurrentUser 仍只读 Authorization 头(lib/auth/middleware.js:6-9)，cookie 不能鉴权 withAuth 接口
 
 ## P5 前端（零密钥）
 - [ ] 5.1 `components/auth/LoginPage`：默认仅「使用 4A 登录」按钮→`/api/auth/4a/login`；`?local=1` 显示原密码表单（后门）
