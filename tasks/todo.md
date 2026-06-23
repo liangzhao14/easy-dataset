@@ -59,9 +59,10 @@
       → 备注：401 重定向保持 /login（前端不知 4A 是否启用，由 /login 页面分支，兼容本地部署）——优于设计 §7 直接跳 4A（4A 关闭时会 404）
 - [ ] 5.3（可选）导航/账号展示：authSource=4a 用户展示 orgName（暂略，后端已存 orgName）
 
-## P6 登出（骨架零密钥，SLO 需密钥）
-- [ ] 6.1 `app/api/auth/logout`：清会话 Cookie + 前端清 localStorage；按 `CGN_4A_LOGOUT_URL` 调 `userLogout`（"切换用户"必须，否则 SSO 自动复登）
-      → **验证**：登出后再访问被重新拦截到 4A
+## P6 登出（骨架零密钥，SLO 需密钥）✅
+- [x] 6.1 `app/api/auth/logout`：清会话 Cookie(ed_session)+access_token Cookie(ed_4a_at)；best-effort 4A SLO(有 ed_4a_at+4A 启用才调,动态 import client)。回调存 ed_4a_at；`handleLogout` 改为先调登出接口再清本地
+      → **已验证(dev真跑)**：POST /api/auth/logout → 200 + Set-Cookie 清 ed_session/ed_4a_at(Max-Age=0)；后续无 cookie→被拦截已由 P4 证
+      → ⏳ **待密钥**：4A userLogout(SLO) 真连（切换用户场景）
 
 ## P7 联调 + 自检（需测试密钥）
 - [ ] 7.1 填 `.env` 测试值；先打通 signInfo（P0 的 timestamp/appIdParam 确认后）

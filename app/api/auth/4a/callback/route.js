@@ -4,7 +4,7 @@ import { is4AEnabled } from '@/lib/auth/4a/config';
 import { getToken, getUserInfo } from '@/lib/auth/4a/client';
 import { upsertSsoUser } from '@/lib/auth/4a/user';
 import { createToken } from '@/lib/auth';
-import { SESSION_COOKIE, STATE_COOKIE, sessionCookieOptions, safeReturnTo } from '@/lib/auth/cookies';
+import { SESSION_COOKIE, STATE_COOKIE, AT_COOKIE, sessionCookieOptions, safeReturnTo } from '@/lib/auth/cookies';
 
 /** 出错时跳登录页并带错误信息；同时清掉 state Cookie。不调 4A 登出（手册 4.2.4）。 */
 function errorRedirect(origin, message) {
@@ -64,6 +64,8 @@ export async function GET(request) {
     const token = await createToken(user);
     const res = NextResponse.redirect(new URL(returnTo, origin).toString(), 302);
     res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
+    // 存 4A access_token 供登出时单点登出(SLO)；本地登录不会走到这里
+    res.cookies.set(AT_COOKIE, accessToken, sessionCookieOptions());
     res.cookies.delete(STATE_COOKIE);
     return res;
   } catch (e) {

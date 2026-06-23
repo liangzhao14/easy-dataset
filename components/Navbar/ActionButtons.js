@@ -43,7 +43,13 @@ export default function ActionButtons({
   const isZhLanguage = String(i18n.language || '').toLowerCase().startsWith('zh');
   const isAdmin = currentUser?.role === 'admin';
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    // 先调后端清会话 Cookie(ed_session)+可选 4A SLO，否则 4A 登录态仍在
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      /* 忽略，仍清本地 */
+    }
     localStorage.removeItem('easy-dataset-token');
     setToken(null);
     router.push('/login');
