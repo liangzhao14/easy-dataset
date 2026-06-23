@@ -4,26 +4,88 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSetAtom } from 'jotai';
 import {
-  Box, Card, TextField, Button, Typography, Alert, CircularProgress,
-  InputAdornment, IconButton, alpha
+  Box, TextField, Button, Typography, Alert, CircularProgress,
+  InputAdornment, IconButton, Checkbox, FormControlLabel
 } from '@mui/material';
 import {
-  Visibility, VisibilityOff, Person, Lock, Login as LoginIcon,
-  DatasetLinked as LogoIcon, DarkMode, LightMode
+  Visibility, VisibilityOff, PersonOutline, LockOutlined, Login as LoginIcon,
+  DatasetLinked as LogoIcon
 } from '@mui/icons-material';
 import { tokenAtom, currentUserAtom, loginAction } from '@/lib/auth-context';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+
+// —— 设计令牌（浅色科技蓝，柔和近参考图）——
+const C = {
+  primary: '#6E89E9',
+  primaryDeep: '#5573E0',
+  btn: 'linear-gradient(135deg, #98ACF4 0%, #6E89E9 100%)',
+  btnHover: 'linear-gradient(135deg, #8AA0F1 0%, #5E7BE6 100%)',
+  heading: '#1B2440',
+  body: '#5A6A8A',
+  muted: '#8A98B5',
+  field: '#F7F9FC',
+  border: '#E3E9F2',
+  leftBg: 'linear-gradient(135deg, #E9F0FF 0%, #F2F7FF 45%, #FBFCFF 100%)',
+  grid: 'rgba(110,137,233,0.06)'
+};
+
+const REMEMBER_KEY = 'easy-dataset-remember-username';
+
+// 居中主视觉：SVG 八边形光环 + 柔光 + 悬浮 logo（不做实心 3D，干净为先）
+function HeroVisual({ reduceMotion }) {
+  return (
+    <Box sx={{ position: 'relative', width: 360, height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        component="svg"
+        viewBox="0 0 360 340"
+        sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      >
+        <defs>
+          <radialGradient id="edGlow" cx="50%" cy="58%" r="52%">
+            <stop offset="0%" stopColor="rgba(110,137,233,0.30)" />
+            <stop offset="100%" stopColor="rgba(110,137,233,0)" />
+          </radialGradient>
+        </defs>
+        {/* 柔光 */}
+        <ellipse cx="180" cy="190" rx="150" ry="135" fill="url(#edGlow)" />
+        {/* 底座反光 */}
+        <ellipse cx="180" cy="296" rx="104" ry="18" fill="rgba(110,137,233,0.16)" />
+      </Box>
+
+      {/* 悬浮 logo 徽章 */}
+      <motion.div
+        animate={reduceMotion ? undefined : { y: [0, -12, 0] }}
+        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ position: 'relative', marginTop: -10 }}
+      >
+        <Box
+          sx={{
+            width: 150, height: 150, borderRadius: '32px',
+            background: 'linear-gradient(160deg, #ffffff 0%, #E9F0FF 100%)',
+            border: '1px solid rgba(255,255,255,0.95)',
+            boxShadow: '0 30px 60px rgba(110,137,233,0.34), inset 0 1px 0 #fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          <LogoIcon sx={{ fontSize: 80, color: C.primary }} />
+        </Box>
+      </motion.div>
+    </Box>
+  );
+}
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const setToken = useSetAtom(tokenAtom);
   const setCurrentUser = useSetAtom(currentUserAtom);
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
 
   // 4A 接入：判断展示「4A 登录」还是本地密码表单（?local=1 走超管后门）
   const [fourAEnabled, setFourAEnabled] = useState(false);
@@ -35,6 +97,11 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     setIsLocalMode(params.get('local') === '1');
     setQueryError(params.get('error') || '');
+    const savedName = localStorage.getItem(REMEMBER_KEY);
+    if (savedName) {
+      setUsername(savedName);
+      setRemember(true);
+    }
     fetch('/api/auth/config')
       .then(res => res.json())
       .then(data => setFourAEnabled(!!data.fourAEnabled))
@@ -48,9 +115,10 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const data = await loginAction(username, password);
+      if (remember) localStorage.setItem(REMEMBER_KEY, username);
+      else localStorage.removeItem(REMEMBER_KEY);
       setToken(data.token);
       setCurrentUser(data.user);
       router.push('/');
@@ -61,368 +129,206 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'linear-gradient(135deg, #0f0c29 0%, #1a1a3e 30%, #24243e 60%, #0f0c29 100%)'
-      }}
-    >
-      {/* Animated background blobs */}
-      <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <motion.div
-          animate={{ x: [0, 100, 0], y: [0, -50, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute',
-            top: '-20%', left: '-10%',
-            width: 600, height: 600,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15), transparent 70%)',
-            filter: 'blur(60px)'
-          }}
-        />
-        <motion.div
-          animate={{ x: [0, -80, 0], y: [0, 80, 0], scale: [1.1, 0.9, 1.1] }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute',
-            bottom: '-30%', right: '-10%',
-            width: 500, height: 500,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%)',
-            filter: 'blur(60px)'
-          }}
-        />
-        <motion.div
-          animate={{ x: [0, 60, -60, 0], y: [0, -30, 30, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute',
-            top: '40%', left: '50%',
-            width: 400, height: 400,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%)',
-            filter: 'blur(50px)'
-          }}
-        />
-      </Box>
+  const fieldSx = {
+    mb: 2.25,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2,
+      background: C.field,
+      transition: 'border-color .15s, box-shadow .15s',
+      '& fieldset': { borderColor: C.border },
+      '&:hover fieldset': { borderColor: '#C7D2E8' },
+      '&.Mui-focused': { background: '#fff', boxShadow: '0 0 0 4px rgba(110,137,233,0.12)' },
+      '&.Mui-focused fieldset': { borderColor: C.primary, borderWidth: 1.5 }
+    },
+    '& input': { color: C.heading, py: 1.7 },
+    '& input::placeholder': { color: C.muted, opacity: 1 }
+  };
 
-      {/* Main content */}
+  return (
+    <Box sx={{ minHeight: '100vh', display: 'flex', background: '#fff' }}>
+      {/* ===== 左：品牌 / 科技插画区 ===== */}
       <Box
         sx={{
+          flex: '1.55 1 0',
           position: 'relative',
-          zIndex: 1,
-          width: '100%',
+          overflow: 'hidden',
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          px: { md: 7, lg: 11 },
+          background: C.leftBg
+        }}
+      >
+        {/* 蓝图网格底纹 */}
+        <Box
+          sx={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `linear-gradient(${C.grid} 1px, transparent 1px), linear-gradient(90deg, ${C.grid} 1px, transparent 1px)`,
+            backgroundSize: '48px 48px',
+            maskImage: 'radial-gradient(130% 100% at 40% 50%, #000 55%, transparent 100%)',
+            WebkitMaskImage: 'radial-gradient(130% 100% at 40% 50%, #000 55%, transparent 100%)'
+          }}
+        />
+
+        {/* 左上角品牌图标（仅图标，避免与大标题重复）*/}
+        <Box sx={{ position: 'absolute', top: 36, left: { md: 44, lg: 60 }, zIndex: 3 }}>
+          <Box sx={{ width: 42, height: 42, borderRadius: '12px', background: C.btn, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(110,137,233,0.34)' }}>
+            <LogoIcon sx={{ fontSize: 25, color: '#fff' }} />
+          </Box>
+        </Box>
+
+        {/* 标题 + 描述 */}
+        <Box sx={{ position: 'relative', zIndex: 2, maxWidth: 520 }}>
+          <Typography sx={{ fontSize: { md: 44, lg: 54 }, fontWeight: 800, letterSpacing: '-0.5px', color: C.heading, lineHeight: 1.08 }}>
+            Easy Dataset
+          </Typography>
+          <Typography sx={{ mt: 1.5, fontSize: { md: 18, lg: 20 }, fontWeight: 600, color: C.primary }}>
+            团队协作 · 大模型微调数据集生产平台
+          </Typography>
+          <Typography sx={{ mt: 2.25, fontSize: 15, lineHeight: 1.9, color: C.body, maxWidth: 500 }}>
+            从文档解析、智能分块到问题与答案生成，团队在同一平台上协作完成高质量训练数据的端到端构建，让微调数据的生产清晰、可控、可追溯。
+          </Typography>
+        </Box>
+
+        {/* 居中主视觉 */}
+        <Box sx={{ position: 'relative', zIndex: 2, alignSelf: 'center', mt: { md: 3, lg: 5 } }}>
+          <HeroVisual reduceMotion={reduceMotion} />
+        </Box>
+      </Box>
+
+      {/* ===== 右：登录卡 ===== */}
+      <Box
+        sx={{
+          flex: '1 1 0',
+          minWidth: { md: 440 },
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          px: 2
+          px: { xs: 3, sm: 6 },
+          py: 6,
+          background: '#fff'
         }}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key="login-form"
-            initial={{ opacity: 0, y: 30, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            style={{ width: '100%', maxWidth: 420 }}
-          >
-            <Card
-              elevation={0}
-              sx={{
-                backdropFilter: 'blur(24px)',
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: 4,
-                overflow: 'hidden',
-                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
-              }}
-            >
-              {/* Card top accent bar */}
-              <Box
-                sx={{
-                  height: 3,
-                  background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #3b82f6)'
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          style={{ width: '100%', maxWidth: 380 }}
+        >
+          {/* 移动端小 logo */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', gap: 1.25, mb: 4 }}>
+            <Box sx={{ width: 40, height: 40, borderRadius: 2, background: C.btn, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LogoIcon sx={{ fontSize: 24, color: '#fff' }} />
+            </Box>
+            <Typography sx={{ fontWeight: 800, fontSize: 20, color: C.heading }}>Easy Dataset</Typography>
+          </Box>
+
+          <Typography sx={{ fontSize: 26, fontWeight: 800, color: C.heading }}>
+            您好！欢迎登录
+          </Typography>
+          <Typography sx={{ mt: 1, mb: 4, fontSize: 14, color: C.muted }}>
+            {showLocalForm ? '请输入账号与密码进入系统' : '使用中广核 4A 统一身份认证登录'}
+          </Typography>
+
+          {(error || queryError) && (
+            <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2, alignItems: 'center', '& .MuiAlert-message': { fontSize: 13.5 } }}>
+              {error || queryError}
+            </Alert>
+          )}
+
+          {!configLoaded ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+              <CircularProgress size={26} sx={{ color: C.primary }} />
+            </Box>
+          ) : showLocalForm ? (
+            <Box component="form" onSubmit={handleLogin}>
+              <TextField
+                fullWidth
+                placeholder="请输入用户名"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
+                autoComplete="username"
+                InputProps={{ startAdornment: (<InputAdornment position="start"><PersonOutline sx={{ color: C.muted, fontSize: 20 }} /></InputAdornment>) }}
+                sx={fieldSx}
+              />
+              <TextField
+                fullWidth
+                placeholder="请输入密码"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="current-password"
+                InputProps={{
+                  startAdornment: (<InputAdornment position="start"><LockOutlined sx={{ color: C.muted, fontSize: 20 }} /></InputAdornment>),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setShowPassword(!showPassword)} sx={{ color: C.muted }}>
+                        {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
                 }}
+                sx={fieldSx}
               />
 
-              <Box sx={{ p: { xs: 4, sm: 5 } }}>
-                {/* Logo */}
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-                  style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}
-                >
-                  <Box
-                    sx={{
-                      width: 64, height: 64,
-                      borderRadius: 3,
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)'
-                    }}
-                  >
-                    <LogoIcon sx={{ fontSize: 36, color: '#fff' }} />
-                  </Box>
-                </motion.div>
+              <FormControlLabel
+                control={<Checkbox size="small" checked={remember} onChange={(e) => setRemember(e.target.checked)} sx={{ color: C.border, '&.Mui-checked': { color: C.primary } }} />}
+                label="记住账号"
+                sx={{ mb: 1.5, '& .MuiFormControlLabel-label': { fontSize: 13.5, color: C.body } }}
+              />
 
-                {/* Title */}
-                <Typography
-                  variant="h4"
-                  align="center"
-                  sx={{
-                    fontWeight: 800,
-                    background: 'linear-gradient(135deg, #e2e8f0 0%, #a5b4fc 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    mb: 1
-                  }}
-                >
-                  Easy Dataset
+              <Button
+                type="submit"
+                fullWidth
+                disableElevation
+                disabled={loading || !username || !password}
+                sx={{
+                  py: 1.5, borderRadius: 2, textTransform: 'none', fontSize: 16, fontWeight: 600, color: '#fff',
+                  background: C.btn,
+                  boxShadow: '0 8px 22px rgba(110,137,233,0.30)',
+                  '&:hover': { background: C.btnHover, boxShadow: '0 10px 28px rgba(110,137,233,0.38)' },
+                  '&.Mui-disabled': { background: '#C9D3E8', color: '#fff', boxShadow: 'none' }
+                }}
+              >
+                {loading ? <CircularProgress size={22} sx={{ color: '#fff' }} /> : '进 入 系 统'}
+              </Button>
+
+              {fourAEnabled && (
+                <Typography sx={{ mt: 3, textAlign: 'center', fontSize: 13 }}>
+                  <Box component="a" href="/login" sx={{ color: C.primary, textDecoration: 'none', fontWeight: 500 }}>← 返回 4A 统一登录</Box>
                 </Typography>
+              )}
+            </Box>
+          ) : (
+            <Box>
+              <Button
+                component="a"
+                href="/api/auth/4a/login"
+                fullWidth
+                disableElevation
+                startIcon={<LoginIcon />}
+                sx={{
+                  py: 1.5, borderRadius: 2, textTransform: 'none', fontSize: 16, fontWeight: 600, color: '#fff',
+                  background: C.btn,
+                  boxShadow: '0 8px 22px rgba(110,137,233,0.30)',
+                  '&:hover': { background: C.btnHover, boxShadow: '0 10px 28px rgba(110,137,233,0.38)' }
+                }}
+              >
+                使用 4A 统一身份登录
+              </Button>
+              <Typography sx={{ mt: 2.5, textAlign: 'center', fontSize: 13 }}>
+                <Box component="a" href="/login?local=1" sx={{ color: C.muted, textDecoration: 'none' }}>管理员本地登录</Box>
+              </Typography>
+            </Box>
+          )}
 
-                <Typography
-                  variant="body2"
-                  align="center"
-                  sx={{ color: 'rgba(255,255,255,0.45)', mb: 4, fontSize: '0.9rem' }}
-                >
-                  团队协作数据集生产平台
-                </Typography>
-
-                {/* Divider */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    mb: 3,
-                    '&::before, &::after': {
-                      content: '""',
-                      flex: 1,
-                      height: '1px',
-                      background: 'rgba(255,255,255,0.08)'
-                    }
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.7rem' }}>
-                    登录
-                  </Typography>
-                </Box>
-
-                {/* Error */}
-                <AnimatePresence>
-                  {(error || queryError) && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <Alert
-                        severity="error"
-                        variant="filled"
-                        sx={{
-                          mb: 2.5,
-                          borderRadius: 2,
-                          '& .MuiAlert-message': { fontSize: '0.875rem' }
-                        }}
-                      >
-                        {error || queryError}
-                      </Alert>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Form / 4A 登录入口 */}
-                {!configLoaded ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-                    <CircularProgress size={28} sx={{ color: 'rgba(165,180,252,0.8)' }} />
-                  </Box>
-                ) : showLocalForm ? (
-                <Box component="form" onSubmit={handleLogin}>
-                  <TextField
-                    fullWidth
-                    placeholder="请输入账号"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={loading}
-                    autoComplete="username"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Person sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      mb: 2,
-                      '& .MuiOutlinedInput-root': {
-                        color: '#e2e8f0',
-                        borderRadius: 2,
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        transition: 'all 0.2s',
-                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
-                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: 2 },
-                        '& input::placeholder': { color: 'rgba(255,255,255,0.3)' }
-                      },
-                      '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.45)' }
-                    }}
-                  />
-
-                  <TextField
-                    fullWidth
-                    placeholder="请输入密码"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    autoComplete="current-password"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Lock sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => setShowPassword(!showPassword)}
-                            sx={{ color: 'rgba(255,255,255,0.3)' }}
-                          >
-                            {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                          </IconButton>
-                        </InputAdornment>
-                      )
-                    }}
-                    sx={{
-                      mb: 3,
-                      '& .MuiOutlinedInput-root': {
-                        color: '#e2e8f0',
-                        borderRadius: 2,
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        transition: 'all 0.2s',
-                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
-                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-                        '&.Mui-focused fieldset': { borderColor: '#6366f1', borderWidth: 2 },
-                        '& input::placeholder': { color: 'rgba(255,255,255,0.3)' }
-                      }
-                    }}
-                  />
-
-                  <motion.div
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                  >
-                    <Button
-                      type="submit"
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      disabled={loading || !username || !password}
-                      startIcon={!loading && <LoginIcon />}
-                      sx={{
-                        py: 1.6,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        letterSpacing: 0.5,
-                        background: loading
-                          ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
-                          : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                        boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
-                        '&:hover': {
-                          boxShadow: '0 6px 28px rgba(99, 102, 241, 0.5)',
-                          background: 'linear-gradient(135deg, #7372f5, #9b6df5)'
-                        },
-                        '&:disabled': {
-                          background: 'rgba(255,255,255,0.08)',
-                          color: 'rgba(255,255,255,0.2)'
-                        }
-                      }}
-                    >
-                      {loading ? (
-                        <CircularProgress size={22} sx={{ color: 'rgba(255,255,255,0.7)' }} />
-                      ) : (
-                        '登录'
-                      )}
-                    </Button>
-                  </motion.div>
-                </Box>
-                ) : (
-                  <Box>
-                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                      <Button
-                        component="a"
-                        href="/api/auth/4a/login"
-                        fullWidth
-                        variant="contained"
-                        size="large"
-                        startIcon={<LoginIcon />}
-                        sx={{
-                          py: 1.6,
-                          borderRadius: 2,
-                          textTransform: 'none',
-                          fontSize: '1rem',
-                          fontWeight: 600,
-                          letterSpacing: 0.5,
-                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                          boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
-                          '&:hover': {
-                            boxShadow: '0 6px 28px rgba(99, 102, 241, 0.5)',
-                            background: 'linear-gradient(135deg, #7372f5, #9b6df5)'
-                          }
-                        }}
-                      >
-                        使用 4A 统一身份登录
-                      </Button>
-                    </motion.div>
-                    <Typography
-                      variant="caption"
-                      align="center"
-                      display="block"
-                      sx={{ mt: 2.5, color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}
-                    >
-                      <a href="/login?local=1" style={{ color: 'rgba(165,180,252,0.7)', textDecoration: 'none' }}>
-                        管理员本地登录
-                      </a>
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Footer */}
-                <Typography
-                  variant="caption"
-                  align="center"
-                  display="block"
-                  sx={{ mt: 4, color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem' }}
-                >
-                  首次使用？请先初始化管理员账号
-                </Typography>
-              </Box>
-            </Card>
-
-            {/* Bottom text */}
-            <Typography
-              variant="caption"
-              align="center"
-              display="block"
-              sx={{ mt: 3, color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}
-            >
-              Easy Dataset v1.7.3 · Powered by Next.js
-            </Typography>
-          </motion.div>
-        </AnimatePresence>
+          <Typography sx={{ mt: 5, fontSize: 12, color: '#B7C1D6' }}>
+            首次使用？请先初始化管理员账号
+          </Typography>
+        </motion.div>
       </Box>
     </Box>
   );
