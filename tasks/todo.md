@@ -11,13 +11,13 @@
 
 ---
 
-## P0 联调前必须钉死（找王伟东 P624247 / 贺军 P633932；原文核对见 /tmp/4a_*.md，推荐默认见设计 §4.3）
-- [ ] 0.1 **`appMethod` 该填什么（最关键）**：BS 样例请求是 getOauth2Token 但 appMethod 头填 getOriginalForSign（自相矛盾）。推荐"当次端点路径"，错则签名直接 401（§10.1）
-- [ ] 0.2 `appIdParam` 是否必传：BS 样例(`4a_bs.md:307`)有、推荐带上；微服务手册是截图取不到（§10.2）
-- [ ] 0.3 `timestamp` 格式：epoch 秒(推荐) vs `yyyy-MM-dd HH:mm:ss`，两文档冲突且须与 signInfo 内一致（§10.3）
-- [ ] 0.4 `version` 取值：`1`(推荐,OAuth线) vs `v1.0`(微服务线)，进 signInfo（§10.4）
-- [ ] 0.5 `tenantId` 本应用取值（样例为 1）（§10.5）
-- [ ] 0.6 索取内网 CA 证书，避免上线用 INSECURE_TLS（§10.6）
+## P0 已据 BS 指南锁定（2026-06-23 用户定以 BS 指南 getOauth2Token 样例为准）✅ + 余项
+- [x] 0.1 **`appMethod` = 固定值 `/authcenter/getOriginalForSign`**（非业务端点！）→ 已改 config/client 用 `CGN_4A_APP_METHOD`
+- [x] 0.2 `appIdParam` 必传（样例 1262546119972360194）→ 配置即带
+- [x] 0.3 `timestamp` = epoch 秒 → CGN_4A_TIMESTAMP_FORMAT=epoch_seconds
+- [x] 0.4 `version` = `1`；0.5 `tenantId` = `1`、`format` = `json`
+- [ ] 0.6 索取内网 CA 证书，避免上线用 INSECURE_TLS（仍需 4A 提供）
+- [ ] 0.7 联调拿真实 appSecret → `CGN_4A_SAMPLE_APP_SECRET=xx node scripts/check-4a-signinfo.mjs` 复算样例 91820a... 核对算法
 
 ## P1 数据模型（零密钥）✅
 - [x] 1.1 `prisma/schema.prisma` Users 加 `authSource String @default("local")` + `orgName String?`

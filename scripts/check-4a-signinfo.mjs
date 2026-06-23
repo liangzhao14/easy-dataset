@@ -2,7 +2,7 @@
 // 复刻 lib/auth/4a/sign.js 的 signInfo 公式——改公式时两处都要改。
 // 用途：
 //   1) 校验实现产出 32 位小写 hex、且拼接顺序稳定（回归保护）。
-//   2) 联调前先用「4A 提供的样例输入」算出 signInfo，与手册样例值逐字节核对。
+//   2) 联调时把真实 appSecret 填进 BS 样例，应能复算出手册样例值 91820a...（核对算法）。
 // 运行：node scripts/check-4a-signinfo.mjs
 import crypto from 'crypto';
 
@@ -11,31 +11,26 @@ function computeSignInfo({ version, appKey, appMethod, timestamp, format, appSec
   return crypto.createHash('md5').update(original, 'utf8').digest('hex');
 }
 
-// —— 微服务手册 .Net 样例输入（4a_microservice.md:428-430）——
-// 该样例文本未给出期望 signInfo，故此处仅作"我方实现产出值"的参考，联调时与 4A 核对。
-const microserviceSample = {
-  version: 'v1.0',
-  appKey: '7fcc6bdbdf844b24b3b1231a862b6896',
-  appMethod: 'usercenter/status',
-  timestamp: '2018-09-09 12:00:00',
-  format: 'json',
-  appSecret: '942ad9a400aa432ebd118de9da78fbc5'
-};
-
-// —— BS 指南样例（4a_bs.md:286-307）：样例未含 appSecret，无法完整复算，仅记录已知输入 ——
-const bsSampleKnown = {
+// —— BS 指南 §3.4 getOauth2Token 请求样例（权威，用户确认以 BS 指南为准）——
+// 已知输入俱全，唯独 appSecret 手册未公开；联调拿到真 appSecret 后应复算出 expectedSignInfo。
+const bsSample = {
   version: '1',
   appKey: '15e12298e1244901bbed36000efce221',
-  appMethod: '/authcenter/getOriginalForSign',
-  timestamp: '1593668975',
+  appMethod: '/authcenter/getOriginalForSign', // 固定值，非业务端点
+  timestamp: '1593668975', // epoch 秒
   format: 'json',
-  appSecret: '<未在手册样例中给出>',
-  expectedSignInfo: '91820a135da0cafc9b278d7f0b014830' // 手册样例值，联调时用真实 appSecret 复算核对
+  appSecret: process.env.CGN_4A_SAMPLE_APP_SECRET || '<联调时填真实 appSecret>',
+  expectedSignInfo: '91820a135da0cafc9b278d7f0b014830'
 };
 
-const sign = computeSignInfo(microserviceSample);
-console.log('微服务手册样例输入 → 我方 signInfo:', sign);
-console.log('BS 指南样例期望 signInfo（需真实 appSecret 才能复算核对）:', bsSampleKnown.expectedSignInfo);
+const sign = computeSignInfo(bsSample);
+console.log('BS 样例输入 → 我方 signInfo:', sign);
+console.log('BS 样例手册期望 signInfo  :', bsSample.expectedSignInfo);
+if (bsSample.appSecret.startsWith('<')) {
+  console.log('（未提供真实 appSecret，无法核对期望值；设 CGN_4A_SAMPLE_APP_SECRET 后可核对）');
+} else {
+  console.log(sign === bsSample.expectedSignInfo ? '🎯 与手册样例一致，算法确认无误' : '❌ 与手册样例不一致，检查参数/拼接顺序');
+}
 
 const isHex32 = /^[0-9a-f]{32}$/.test(sign);
 if (!isHex32) {
