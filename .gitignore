@@ -35,6 +35,9 @@ merge-translations.js
 # Playwright MCP / Hermes runtime caches
 .playwright-mcp/
 .hermes/
+# 代码分析工具缓存
+.codegraph/
+.reasonix/
 # Claude 会话工作目录
 .claude/
 # 数据库 / 上传备份目录
