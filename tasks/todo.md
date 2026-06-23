@@ -57,7 +57,8 @@
 - [x] 5.2 `lib/auth-provider.js`：无 localStorage token 时用会话 Cookie 调 /api/auth/me 引导 token 进 localStorage（坑 13.3），并修复 race（引导完成前不判未登录）
       → **已验证(Playwright真跑)**：注入 httpOnly ed_session + 清空 localStorage → 访问 / 不被弹去 login、token 被引导进 localStorage
       → 备注：401 重定向保持 /login（前端不知 4A 是否启用，由 /login 页面分支，兼容本地部署）——优于设计 §7 直接跳 4A（4A 关闭时会 404）
-- [ ] 5.3（可选）导航/账号展示：authSource=4a 用户展示 orgName（暂略，后端已存 orgName）
+- [x] 5.3 导航/账号展示：`/api/auth/me` 补 orgName/authSource；ActionButtons 账号区 4A 用户显示「· 机构名」+ Tooltip 含机构
+      → **已验证(Playwright真跑)**：临时给 lisi 设 orgName → 导航栏显示「李四-已修改 · 中广核测试机构」，me 返回 orgName/authSource（测后已还原 db）
 
 ## P6 登出（骨架零密钥，SLO 需密钥）✅
 - [x] 6.1 `app/api/auth/logout`：清会话 Cookie(ed_session)+access_token Cookie(ed_4a_at)；best-effort 4A SLO(有 ed_4a_at+4A 启用才调,动态 import client)。回调存 ed_4a_at；`handleLogout` 改为先调登出接口再清本地

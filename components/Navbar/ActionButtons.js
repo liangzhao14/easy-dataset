@@ -120,7 +120,11 @@ export default function ActionButtons({
       {/* 当前登录用户 + Logout - always visible */}
       {currentUser && (
         <>
-          <Tooltip title={`账号：${currentUser.username}　角色：${currentUser.role === 'admin' ? '管理员' : '普通用户'}`}>
+          <Tooltip
+            title={`账号：${currentUser.username}　角色：${currentUser.role === 'admin' ? '管理员' : '普通用户'}${
+              currentUser.orgName ? `　机构：${currentUser.orgName}` : ''
+            }`}
+          >
             <Box
               sx={{
                 ...ab,
@@ -134,6 +138,11 @@ export default function ActionButtons({
             >
               <AccountCircleIcon fontSize="small" />
               {currentUser.displayName}
+              {currentUser.orgName && (
+                <Box component="span" sx={{ ml: 0.5, opacity: 0.6, fontSize: '0.75rem' }}>
+                  · {currentUser.orgName}
+                </Box>
+              )}
             </Box>
           </Tooltip>
           <Tooltip title="退出登录">

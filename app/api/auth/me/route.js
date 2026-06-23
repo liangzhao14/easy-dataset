@@ -32,7 +32,9 @@ export async function GET(request) {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      role: user.role
+      role: user.role,
+      authSource: user.authSource,
+      orgName: user.orgName
     };
     // 仅当经 Cookie 鉴权时回传 token，供前端写入 localStorage 后续走 Bearer。
     if (cookieToken) body.token = cookieToken;
