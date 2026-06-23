@@ -50,12 +50,14 @@
 - [x] 4.3 `withAuth` **保持 Bearer-only**（§6.6 不做，防 CSRF 回退 坑 13.2）
       → **已确认(代码未动)**：getCurrentUser 仍只读 Authorization 头(lib/auth/middleware.js:6-9)，cookie 不能鉴权 withAuth 接口
 
-## P5 前端（零密钥）
-- [ ] 5.1 `components/auth/LoginPage`：默认仅「使用 4A 登录」按钮→`/api/auth/4a/login`；`?local=1` 显示原密码表单（后门）
-      → **验证**：`/login` 只见 4A 按钮；`/login?local=1` 见密码表单
-- [ ] 5.2 `lib/auth-provider.js`：401/无会话跳转 `/login`→`/api/auth/4a/login`（保留 `?local=1` 例外）；回调回来后从 `/api/auth/me` 取 token 存 localStorage（坑 13.3）
-      → **验证**：token 过期/401 自动跳 4A；后门路径不被劫持
-- [ ] 5.3（可选）导航/账号展示：authSource=4a 用户展示 orgName
+## P5 前端（零密钥）✅
+新增 `app/api/auth/config`（公开特性开关 fourAEnabled/localLoginEnabled，登录页据此分支）
+- [x] 5.1 `components/auth/LoginPage`：4A 启用且非 ?local=1 → 显「使用 4A 统一身份登录」按钮 + 后门链接；否则显原密码表单
+      → **已验证(Playwright真跑)**：/login→4A 按钮(href=/api/auth/4a/login)+后门链接、无密码框；/login?local=1→密码框、无 4A 按钮；并展示 ?error=
+- [x] 5.2 `lib/auth-provider.js`：无 localStorage token 时用会话 Cookie 调 /api/auth/me 引导 token 进 localStorage（坑 13.3），并修复 race（引导完成前不判未登录）
+      → **已验证(Playwright真跑)**：注入 httpOnly ed_session + 清空 localStorage → 访问 / 不被弹去 login、token 被引导进 localStorage
+      → 备注：401 重定向保持 /login（前端不知 4A 是否启用，由 /login 页面分支，兼容本地部署）——优于设计 §7 直接跳 4A（4A 关闭时会 404）
+- [ ] 5.3（可选）导航/账号展示：authSource=4a 用户展示 orgName（暂略，后端已存 orgName）
 
 ## P6 登出（骨架零密钥，SLO 需密钥）
 - [ ] 6.1 `app/api/auth/logout`：清会话 Cookie + 前端清 localStorage；按 `CGN_4A_LOGOUT_URL` 调 `userLogout`（"切换用户"必须，否则 SSO 自动复登）

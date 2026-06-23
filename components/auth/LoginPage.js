@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSetAtom } from 'jotai';
 import {
@@ -24,6 +24,25 @@ export default function LoginPage() {
   const setToken = useSetAtom(tokenAtom);
   const setCurrentUser = useSetAtom(currentUserAtom);
   const router = useRouter();
+
+  // 4A 接入：判断展示「4A 登录」还是本地密码表单（?local=1 走超管后门）
+  const [fourAEnabled, setFourAEnabled] = useState(false);
+  const [isLocalMode, setIsLocalMode] = useState(false);
+  const [queryError, setQueryError] = useState('');
+  const [configLoaded, setConfigLoaded] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsLocalMode(params.get('local') === '1');
+    setQueryError(params.get('error') || '');
+    fetch('/api/auth/config')
+      .then(res => res.json())
+      .then(data => setFourAEnabled(!!data.fourAEnabled))
+      .catch(() => {})
+      .finally(() => setConfigLoaded(true));
+  }, []);
+
+  const showLocalForm = isLocalMode || !fourAEnabled;
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -200,7 +219,7 @@ export default function LoginPage() {
 
                 {/* Error */}
                 <AnimatePresence>
-                  {error && (
+                  {(error || queryError) && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
@@ -216,13 +235,18 @@ export default function LoginPage() {
                           '& .MuiAlert-message': { fontSize: '0.875rem' }
                         }}
                       >
-                        {error}
+                        {error || queryError}
                       </Alert>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Form */}
+                {/* Form / 4A 登录入口 */}
+                {!configLoaded ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+                    <CircularProgress size={28} sx={{ color: 'rgba(165,180,252,0.8)' }} />
+                  </Box>
+                ) : showLocalForm ? (
                 <Box component="form" onSubmit={handleLogin}>
                   <TextField
                     fullWidth
@@ -335,6 +359,46 @@ export default function LoginPage() {
                     </Button>
                   </motion.div>
                 </Box>
+                ) : (
+                  <Box>
+                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                      <Button
+                        component="a"
+                        href="/api/auth/4a/login"
+                        fullWidth
+                        variant="contained"
+                        size="large"
+                        startIcon={<LoginIcon />}
+                        sx={{
+                          py: 1.6,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                          letterSpacing: 0.5,
+                          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                          boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
+                          '&:hover': {
+                            boxShadow: '0 6px 28px rgba(99, 102, 241, 0.5)',
+                            background: 'linear-gradient(135deg, #7372f5, #9b6df5)'
+                          }
+                        }}
+                      >
+                        使用 4A 统一身份登录
+                      </Button>
+                    </motion.div>
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      display="block"
+                      sx={{ mt: 2.5, color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}
+                    >
+                      <a href="/login?local=1" style={{ color: 'rgba(165,180,252,0.7)', textDecoration: 'none' }}>
+                        管理员本地登录
+                      </a>
+                    </Typography>
+                  </Box>
+                )}
 
                 {/* Footer */}
                 <Typography
