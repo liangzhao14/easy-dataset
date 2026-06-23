@@ -25,13 +25,14 @@
 - [ ] 1.2 注意 Electron 打包另需 `pnpm db:template`（本接入面向 Web/Docker，暂不做）
 
 ## P2 4A 核心库（零密钥可写+单测）
-- [ ] 2.1 `lib/auth/4a/config.js`：集中读 `CGN_4A_*`，导出 config + `is4AEnabled()`
-      → **验证**：env 缺失时 `is4AEnabled()===false` 且不抛错
-- [ ] 2.2 `lib/auth/4a/sign.js`：`buildGatewayHeaders(appMethod)`；`signInfo=md5(version+appKey+appMethod+timestamp+format+appSecret)` 小写hex；timestamp 格式做成可切换常量（坑 §10.2）
-      → **验证**：脚本对一组已知值算 signInfo，与 4A 样例核对一致
-- [ ] 2.3 `lib/auth/4a/client.js`：`getToken/getUserInfo/logout` + 内置 `https.Agent`（优先 `CGN_4A_CA_CERT`，`INSECURE_TLS=true` 仅测试 rejectUnauthorized:false）
-      → **验证**：mock/nock 验证请求头、body、TLS agent 选择；真连留 P3
-      → ⚠️ **坑 13.1**：Node-only 模块，**绝不能被 middleware import**
+- [x] 2.1 `lib/auth/4a/config.js`：集中读 `CGN_4A_*`，导出 `fourAConfig` + `is4AEnabled()`
+      → **已验证**：未配端点时 `is4AEnabled()===false`、不抛错；语法 --check OK
+- [x] 2.2 `lib/auth/4a/sign.js`：`buildGatewayHeaders/computeSignInfo/buildTimestamp`；timestamp 按 `CGN_4A_TIMESTAMP_FORMAT` 双模式
+      → **已验证**：`scripts/check-4a-signinfo.mjs` 跑通，产出 32位小写hex、拼接顺序正确（联调时与 4A 样例核对真值）
+- [x] 2.3 `lib/auth/4a/client.js`：`getToken/getUserInfo/logout`（参数依 BS 指南接口表）+ `https.Agent`（CA / INSECURE_TLS）
+      → **已验证**：语法 --check OK；接口参数 grant_type/code/redirect_uri、access_token/client_id 已对齐手册
+      → ⚠️ **坑 13.1**：Node-only（https/fs），**绝不能被 middleware import**
+      → 注：业务参数默认走 query string、appMethod 取 URL pathname；form/json 与 appMethod 固定值待 P0/联调确认
 
 ## P3 路由（骨架零密钥，真连需密钥）
 - [ ] 3.1 `app/api/auth/4a/login/route.js` GET：`is4AEnabled` 短路；生成 `state` 写短时 httpOnly Cookie（**SameSite=Lax** 坑 13.4）；拼 authorize URL（redirect_uri URLEncode）；带 `returnTo`；302 到 `CGN_4A_AUTHORIZE_URL`
