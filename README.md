@@ -1,277 +1,119 @@
 <div align="center">
 
-![](./public//imgs/bg2.png)
+![](./public/imgs/bg2.png)
 
-<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/ConardLi/easy-dataset">
-<img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/ConardLi/easy-dataset/total">
-<img alt="GitHub Release" src="https://img.shields.io/github/v/release/ConardLi/easy-dataset">
+# Easy Dataset · 企业增强版
+
+**面向大模型微调数据集构建的一体化平台 —— 在上游 [ConardLi/easy-dataset](https://github.com/ConardLi/easy-dataset) 基础上，叠加账号认证、团队协作、权限隔离、操作审计、监控看板与 Docker 部署。**
+
 <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="AGPL 3.0 License"/>
-<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/ConardLi/easy-dataset">
-<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/ConardLi/easy-dataset">
-<a href="https://arxiv.org/abs/2507.04009v1" target="_blank">
-  <img src="https://img.shields.io/badge/arXiv-2507.04009-b31b1b.svg" alt="arXiv:2507.04009">
-</a>
-
-<a href="https://trendshift.io/repositories/13944" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13944" alt="ConardLi%2Feasy-dataset | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
-**A powerful tool for creating fine-tuning datasets for Large Language Models**
-
-[简体中文](./README.zh-CN.md) | [English](./README.md) | [Türkçe](./README.tr.md)
-
-[Features](#features) • [Quick Start](#local-run) • [Documentation](https://docs.easy-dataset.com/ed/en) • [Contributing](#contributing) • [License](#license)
-
-If you like this project, please give it a Star⭐️, or buy the author a coffee => [Donate](./public/imgs/aw.jpg) ❤️!
+<img src="https://img.shields.io/badge/fork%20of-ConardLi%2Feasy--dataset-blue.svg" alt="Fork"/>
+<img src="https://img.shields.io/badge/Next.js-14-black.svg" alt="Next.js 14"/>
+<img src="https://img.shields.io/badge/Prisma-SQLite-2D3748.svg" alt="Prisma + SQLite"/>
 
 </div>
 
-## Overview
+> **本仓库是一个 fork。** 上游 Easy Dataset 是单机/桌面的纯数据集工具；本 fork 在其完整能力之上，叠加了**多用户账号体系、团队协作、基于角色的权限隔离、操作审计、资源监控看板和 Docker 化部署**，并正在接入**中广核 4A 统一身份认证（SSO）**。涉及多用户 / 权限 / 部署的逻辑均为本 fork 引入，上游没有。
 
-Easy Dataset is an application specifically designed for building large language model (LLM) datasets. It features an intuitive interface, along with built-in powerful document parsing tools, intelligent segmentation algorithms, data cleaning and augmentation capabilities. The application can convert domain-specific documents in various formats into high-quality structured datasets, which are applicable to scenarios such as model fine-tuning, retrieval-augmented generation (RAG), and model performance evaluation.
+---
 
-![](./public/imgs/arc3.png)
+## ✨ 本 fork 相比上游新增
 
-## News
+| 能力 | 说明 |
+|------|------|
+| 🔐 **账号认证** | JWT（jose / HS256）+ bcrypt 密码哈希，登录页重设计（分屏浅色科技蓝），所有受保护 API 经统一 `withAuth` 高阶函数门禁 |
+| 👥 **团队协作** | `Users / Teams / TeamMembers / ProjectMembers` 账号与协作层，项目可归属个人或团队 |
+| 🛡️ **权限隔离（RBAC）** | 系统角色 `admin / user`；项目角色 `owner / editor / annotator / viewer`；项目类型 `personal / team / demo` |
+| 📝 **操作审计** | 每次写操作落 `OperationLogs`（含前后快照、IP、UA），并维护项目"最终操作人" |
+| 📊 **监控看板** | `LlmUsageLogs` 统计 Token 消耗 / API 调用 / 模型性能 |
+| 🐳 **Docker 部署** | 多阶段构建镜像，entrypoint 自动 `prisma db push` 建表，bind mount 持久化，healthcheck 探活 |
+| 🏢 **中广核 4A SSO**（进行中） | 登录入口前置 4A OAuth2 授权码认证，认证后仍签发本系统 JWT，下游权限/审计不变。框架已就绪，待测试密钥联调（详见 `docs/4a-sso-integration-design.md`） |
 
-🎉🎉 Easy Dataset Version 1.7.0 launches brand-new evaluation capabilities! You can effortlessly convert domain-specific documents into evaluation datasets (test sets) and automatically run multi-dimensional evaluation tasks. Additionally, it comes with a human blind test system, enabling you to easily meet needs such as vertical domain model evaluation, post-fine-tuning model performance assessment, and RAG recall rate evaluation. Tutorial: [https://www.bilibili.com/video/BV1CRrVB7Eb4/](https://www.bilibili.com/video/BV1CRrVB7Eb4/)
+## 📦 基础能力（继承自上游）
 
-## Features
+- **文档处理 → 数据集**：PDF / Markdown / DOCX / TXT / EPUB 智能解析，多种文本分割算法，自动问题生成，领域标签树，答案 + 思维链（COT）生成，数据清洗
+- **多种数据集类型**：单轮问答、多轮对话、图片问答、从领域主题直接蒸馏
+- **模型评估系统**：评估集生成、Judge Model 自动评分、人工盲测竞技场（Arena）、AI 质量打分
+- **导出与集成**：Alpaca / ShareGPT / Multilingual-Thinking 格式（JSON/JSONL）、LLaMA Factory 配置一键生成、Hugging Face 直传
+- **模型支持**：兼容所有 OpenAI 格式 API —— OpenAI、MiniMax、Ollama（本地）、智谱、阿里百炼、OpenRouter；视觉模型支持 PDF 解析与图片问答
+- **多语言界面**：中 / 英 / 土 / 葡；**桌面端**：Windows / macOS / Linux（Electron）
 
-### 📄 Document Processing & Data Generation
+## 🧱 技术栈
 
-- **Intelligent Document Processing**: Supports PDF, Markdown, DOCX, TXT, EPUB and more formats with intelligent recognition
-- **Intelligent Text Splitting**: Multiple splitting algorithms (Markdown structure, recursive separators, fixed length, code-aware chunking), with customizable visual segmentation
-- **Intelligent Question Generation**: Auto-extract relevant questions from text segments, with question templates and batch generation
-- **Domain Label Tree**: Intelligently builds global domain label trees based on document structure, with auto-tagging capabilities
-- **Answer Generation**: Uses LLM API to generate comprehensive answers and Chain of Thought (COT), with AI optimization
-- **Data Cleaning**: Intelligent text cleaning to remove noise and improve data quality
+- **框架**：Next.js 14（App Router）
+- **数据库**：Prisma + SQLite（`prisma/schema.prisma` 为真相之源）
+- **认证**：jose（JWT, HS256）+ bcryptjs
+- **UI**：Material-UI (MUI)
+- **桌面端**：Electron
+- **国际化**：i18next + react-i18next
+- **端口**：固定 **1717**
 
-### 🔄 Multiple Dataset Types
+> ⚠️ 旧的 `ARCHITECTURE.md` 写于早期"fs 文件系统模拟数据库"时代，已过时；架构以 `prisma/schema.prisma` 与 `CLAUDE.md` 为准。
 
-- **Single-Turn QA Datasets**: Standard question-answer pairs for basic fine-tuning
-- **Multi-Turn Dialogue Datasets**: Customizable roles and scenarios for conversational format
-- **Image QA Datasets**: Generate visual QA data from images, with multiple import methods (directory, PDF, ZIP)
-- **Data Distillation**: Generate label trees and questions directly from domain topics without uploading documents
+## 🚀 快速开始
 
-### 📊 Model Evaluation System
-
-- **Evaluation Datasets**: Generate true/false, single-choice, multiple-choice, short-answer, and open-ended questions
-- **Automated Model Evaluation**: Use Judge Model to automatically evaluate model answer quality with customizable scoring rules
-- **Human Blind Test (Arena)**: Double-blind comparison of two models' answers for unbiased evaluation
-- **AI Quality Assessment**: Automatic quality scoring and filtering of generated datasets
-
-### 🛠️ Advanced Features
-
-- **Custom Prompts**: Project-level customization of all prompt templates (question generation, answer generation, data cleaning, etc.)
-- **GA Pair Generation**: Genre-Audience pair generation to enrich data diversity
-- **Task Management Center**: Background batch task processing with monitoring and interruption support
-- **Resource Monitoring Dashboard**: Token consumption statistics, API call tracking, model performance analysis
-- **Model Testing Playground**: Compare up to 3 models simultaneously
-
-### 📤 Export & Integration
-
-- **Multiple Export Formats**: Alpaca, ShareGPT, Multilingual-Thinking formats with JSON/JSONL file types
-- **Balanced Export**: Configure export counts per tag for dataset balancing
-- **LLaMA Factory Integration**: One-click LLaMA Factory configuration file generation
-- **Hugging Face Upload**: Direct upload datasets to Hugging Face Hub
-
-### 🤖 Model Support
-
-- **Wide Model Compatibility**: Compatible with all LLM APIs that follow the OpenAI format
-- **Multi-Provider Support**: OpenAI, MiniMax, Ollama (local models), Zhipu AI, Alibaba Bailian, OpenRouter, and more
-- **Vision Models**: Support Gemini, Claude, etc. for PDF parsing and image QA
-
-### 🌐 User Experience
-
-- **User-Friendly Interface**: Modern, intuitive UI designed for both technical and non-technical users
-- **Multi-Language Support**: Complete Chinese, English, Turkish and Portuguese language support 🇹🇷
-- **Dataset Square**: Discover and explore public dataset resources
-- **Desktop Clients**: Available for Windows, macOS, and Linux
-
-## Quick Demo
-
-https://github.com/user-attachments/assets/6ddb1225-3d1b-4695-90cd-aa4cb01376a8
-
-## Local Run
-
-### Download Client
-
-<table style="width: 100%">
-  <tr>
-    <td width="20%" align="center">
-      <b>Windows</b>
-    </td>
-    <td width="30%" align="center" colspan="2">
-      <b>MacOS</b>
-    </td>
-    <td width="20%" align="center">
-      <b>Linux</b>
-    </td>
-  </tr>
-  <tr style="text-align: center">
-    <td align="center" valign="middle">
-      <a href='https://github.com/ConardLi/easy-dataset/releases/latest'>
-        <img src='./public/imgs/windows.png' style="height:24px; width: 24px" />
-        <br />
-        <b>Setup.exe</b>
-      </a>
-    </td>
-    <td align="center" valign="middle">
-      <a href='https://github.com/ConardLi/easy-dataset/releases/latest'>
-        <img src='./public/imgs/mac.png' style="height:24px; width: 24px" />
-        <br />
-        <b>Intel</b>
-      </a>
-    </td>
-    <td align="center" valign="middle">
-      <a href='https://github.com/ConardLi/easy-dataset/releases/latest'>
-        <img src='./public/imgs/mac.png' style="height:24px; width: 24px" />
-        <br />
-        <b>M</b>
-      </a>
-    </td>
-    <td align="center" valign="middle">
-      <a href='https://github.com/ConardLi/easy-dataset/releases/latest'>
-        <img src='./public/imgs/linux.png' style="height:24px; width: 24px" />
-        <br />
-        <b>AppImage</b>
-      </a>
-    </td>
-  </tr>
-</table>
-
-### Install with NPM
-
-1. Clone the repository:
+### 本地开发
 
 ```bash
-   git clone https://github.com/ConardLi/easy-dataset.git
-   cd easy-dataset
-```
-
-2. Install dependencies:
-
-```bash
-   npm install
-```
-
-3. Start the development server:
-
-```bash
-   npm run build
-
-   npm run start
-```
-
-4. Open your browser and visit `http://localhost:1717`
-
-### Using the Official Docker Image
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/ConardLi/easy-dataset.git
+git clone https://github.com/liangzhao14/easy-dataset.git
 cd easy-dataset
+
+# 配置 secret（必需）：至少 32 位随机串
+cp .env.example .env.local
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env.local
+
+pnpm install
+pnpm dev            # 自动 prisma db push 后启动，访问 http://localhost:1717
 ```
 
-2. Modify the `docker-compose.yml` file:
-
-```yml
-services:
-  easy-dataset:
-    image: ghcr.io/conardli/easy-dataset
-    container_name: easy-dataset
-    ports:
-      - '1717:1717'
-    volumes:
-      - ./local-db:/app/local-db
-      - ./prisma:/app/prisma
-    restart: unless-stopped
-```
-
-> **Note:** It is recommended to use the `local-db` and `prisma` folders in the current code repository directory as mount paths to maintain consistency with the database paths when starting via NPM.
-
-> **Note:** The database file will be automatically initialized on first startup, no need to manually run `npm run db:push`.
-
-3. Start with docker-compose:
+### Docker 部署（从本仓库源码构建，含本 fork 全部增强）
 
 ```bash
-docker-compose up -d
-```
-
-4. Open a browser and visit `http://localhost:1717`
-
-### Building with a Local Dockerfile
-
-If you want to build the image yourself, use the Dockerfile in the project root directory:
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/ConardLi/easy-dataset.git
+git clone https://github.com/liangzhao14/easy-dataset.git
 cd easy-dataset
+
+# .env.local 必须包含 JWT_SECRET（≥32 位）
+cp .env.example .env.local
+echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env.local
+
+docker compose up -d            # 从 Dockerfile 构建并启动，端口 1717
+docker compose logs -f          # 查看日志
 ```
 
-2. Build the Docker image:
+- 数据库文件首次启动**自动初始化**（无需手动 `db:push`）。
+- `prisma/`（SQLite 库）与 `local-db/`（上传文件、分块、项目数据）通过 volume 持久化。
+- 改源码后需 `docker compose up -d --build` 重建（生产镜像不热重载）。
 
-```bash
-docker build -t easy-dataset .
+> 💡 关闭多用户/4A 也能用：不配 `CGN_4A_*` 时 `/login` 为普通本地账号密码登录，本地部署不受影响。
+
+## 🔑 角色与权限模型
+
+```
+系统角色   admin / user
+项目角色   owner / editor / annotator / viewer   （annotator 可打分 / 打标签 / 备注 / 确认）
+项目类型   personal / team / demo
 ```
 
-3. Run the container:
+所有领域实体（UploadFiles → Chunks → Questions → Datasets → 多轮/图片/评估）都挂在 `Projects` 之下；每次写操作进审计日志，LLM 调用进用量日志。
 
-```bash
-docker run -d \
-  -p 1717:1717 \
-  -v ./local-db:/app/local-db \
-  -v ./prisma:/app/prisma \
-  --name easy-dataset \
-  easy-dataset
-```
+## 📁 目录速查
 
-> **Note:** It is recommended to use the `local-db` and `prisma` folders in the current code repository directory as mount paths to maintain consistency with the database paths when starting via NPM.
+| 路径 | 职责 |
+|------|------|
+| `app/api/**/route.js` | 后端 API（受保护接口经 `withAuth`）|
+| `app/projects/[projectId]/<feature>/page.js` | 各功能页面 |
+| `lib/db/` | Prisma 单例 + 各表 CRUD（Server Actions）|
+| `lib/auth/` `lib/audit/` | 认证鉴权 / 操作审计（本 fork 新增）|
+| `lib/llm/core/providers/` | LLM provider 适配器 |
+| `lib/services/tasks/` | 后台长任务编排 |
+| `electron/` | 桌面端壳 |
+| `docs/` | 设计文档（含 4A SSO 接入设计）|
 
-> **Note:** The database file will be automatically initialized on first startup, no need to manually run `npm run db:push`.
+## 🙏 致谢与许可
 
-4. Open a browser and visit `http://localhost:1717`
+本项目基于 [ConardLi/easy-dataset](https://github.com/ConardLi/easy-dataset)（AGPL-3.0）二次开发，核心数据集构建能力归功于上游作者。文档站：<https://docs.easy-dataset.com>。
 
-## Documentation
-
-- View the demo video of this project: [Easy Dataset Demo Video](https://www.bilibili.com/video/BV1y8QpYGE57/)
-- For detailed documentation on all features and APIs, visit our [Documentation Site](https://docs.easy-dataset.com/ed/en)
-- View the paper of this project: [Easy Dataset: A Unified and Extensible Framework for Synthesizing LLM Fine-Tuning Data from Unstructured Documents](https://arxiv.org/abs/2507.04009v1)
-
-## Community Practice
-
-- [Complete test set generation and model evaluation with Easy Dataset](https://www.bilibili.com/video/BV1CRrVB7Eb4/)
-- [Easy Dataset × LLaMA Factory: Enabling LLMs to Efficiently Learn Domain Knowledge](https://buaa-act.feishu.cn/wiki/GVzlwYcRFiR8OLkHbL6cQpYin7g)
-- [Easy Dataset Practical Guide: How to Build High-Quality Datasets?](https://www.bilibili.com/video/BV1MRMnz1EGW)
-- [Interpretation of Key Feature Updates in Easy Dataset](https://www.bilibili.com/video/BV1fyJhzHEb7/)
-- [Foundation Models Fine-tuning Datasets: Basic Knowledge Popularization](https://docs.easy-dataset.com/zhi-shi-ke-pu)
-
-## Contributing
-
-We welcome contributions from the community! If you'd like to contribute to Easy Dataset, please follow these steps:
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Commit your changes (`git commit -m 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request (submit to the DEV branch)
-
-Please ensure that tests are appropriately updated and adhere to the existing coding style.
-
-## Join Discussion Group & Contact the Author
-
-https://docs.easy-dataset.com/geng-duo/lian-xi-wo-men
-
-## License
-
-This project is licensed under the AGPL 3.0 License - see the [LICENSE](LICENSE) file for details.
-
-## Citation
-
-If this work is helpful, please kindly cite as:
+本项目遵循 **AGPL-3.0** 许可，详见 [LICENSE](LICENSE)。
 
 ```bibtex
 @misc{miao2025easydataset,
@@ -284,11 +126,3 @@ If this work is helpful, please kindly cite as:
   url={https://arxiv.org/abs/2507.04009}
 }
 ```
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=ConardLi/easy-dataset&type=Date)](https://www.star-history.com/#ConardLi/easy-dataset&Date)
-
-<div align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/ConardLi">ConardLi</a> • Follow me: <a href="./public/imgs/weichat.jpg">WeChat Official Account</a>｜<a href="https://space.bilibili.com/474921808">Bilibili</a>｜<a href="https://juejin.cn/user/3949101466785709">Juejin</a>｜<a href="https://www.zhihu.com/people/wen-ti-chao-ji-duo-de-xiao-qi">Zhihu</a>｜<a href="https://www.youtube.com/@garden-conard">Youtube</a></sub>
-</div>
