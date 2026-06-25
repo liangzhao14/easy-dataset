@@ -6,6 +6,9 @@ import { upsertSsoUser } from '@/lib/auth/4a/user';
 import { createToken } from '@/lib/auth';
 import { SESSION_COOKIE, STATE_COOKIE, AT_COOKIE, sessionCookieOptions, safeReturnTo } from '@/lib/auth/cookies';
 
+// 同 login 路由：未启用时早退、构建期会被静态缓存，强制运行时求值（见 commit 5bc4d1c）。
+export const dynamic = 'force-dynamic';
+
 /** 出错时跳登录页并带错误信息；同时清掉 state Cookie。不调 4A 登出（手册 4.2.4）。 */
 function errorRedirect(origin, message) {
   const url = new URL('/login', origin);

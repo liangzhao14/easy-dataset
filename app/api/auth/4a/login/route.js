@@ -4,6 +4,11 @@ import crypto from 'crypto';
 import { fourAConfig, is4AEnabled } from '@/lib/auth/4a/config';
 import { STATE_COOKIE, stateCookieOptions, safeReturnTo } from '@/lib/auth/cookies';
 
+// 读运行时 env(is4AEnabled)且会在未启用时早退、不触碰 request，
+// 构建期会被静态预渲染并缓存(x-nextjs-cache HIT)，导致生产配了 4A 仍返回"未启用"。
+// 与 app/api/auth/config 同因(见 commit 5bc4d1c)，强制运行时求值。
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   if (!is4AEnabled()) {
     return NextResponse.json({ error: '4A 登录未启用' }, { status: 404 });
